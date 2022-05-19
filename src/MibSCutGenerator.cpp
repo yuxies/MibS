@@ -577,7 +577,9 @@ MibSCutGenerator::intersectionCuts(BcpsConstraintPool &conPool,
 		    double *lowerLevelSol = new double[lCols];
 		    CoinZeroN(uselessIneqs, lRows);
 		    CoinZeroN(lowerLevelSol, lCols);
-		    if (!findLowerLevelSol(uselessIneqs, lowerLevelSol, sol)){
+		    isTimeLimReached = false;
+		    if (!findLowerLevelSol(uselessIneqs, lowerLevelSol, optLowerSolution,
+          sol)){ // YX: add y^* for nonzero gap case
                        delete [] uselessIneqs;
                        delete [] lowerLevelSol;
                        goto TERM_INTERSECTIONCUT;
@@ -608,7 +610,9 @@ MibSCutGenerator::intersectionCuts(BcpsConstraintPool &conPool,
 	        double *lowerLevelSol = new double[lCols];
 	        CoinZeroN(uselessIneqs, lRows);
 	        CoinZeroN(lowerLevelSol, lCols);
-	        if (!findLowerLevelSolImprovingDirectionIC(uselessIneqs, lowerLevelSol, lpSol)){
+		isTimeLimReached = false;
+	        if (!findLowerLevelSolImprovingDirectionIC(uselessIneqs, lowerLevelSol,
+              optLowerSolution, lpSol)){ // YX: add y^* for nonzero gap case
 		    delete [] uselessIneqs;
 		    delete [] lowerLevelSol;
 		    goto TERM_INTERSECTIONCUT;
@@ -807,7 +811,7 @@ MibSCutGenerator::intersectionCuts(BcpsConstraintPool &conPool,
 //#############################################################################
 bool
 MibSCutGenerator::findLowerLevelSol(double *uselessIneqs, double *lowerLevelSol,
-				    const double *sol)
+				    double *optLowerSol, const double *sol)
 {
     
     std::string feasCheckSolver(localModel_->MibSPar_->entry
@@ -816,6 +820,10 @@ MibSCutGenerator::findLowerLevelSol(double *uselessIneqs, double *lowerLevelSol,
 		     (MibSParams::maxThreadsLL));
     int whichCutsLL(localModel_->MibSPar_->entry
 		    (MibSParams::whichCutsLL));
+    double targetGap(localModel_->MibSPar_->entry(MibSParams::slTargetGap));
+    double etol(localModel_->etol_);
+    double gap = (targetGap < etol) ? 0.0 : targetGap; // YX: added SL gap 
+    double templObj(0.0); // YX: for nonzero gap, track d^2y^*  
 
     bool foundSolution(false);
     
@@ -833,7 +841,7 @@ MibSCutGenerator::findLowerLevelSol(double *uselessIneqs, double *lowerLevelSol,
     int lRows(localModel_->getLowerRowNum());
     int numBinCols(lRows);
     int newNumCols(lCols + numBinCols);
-    int newNumRows(lRows + 1);
+    int newNumRows = (targetGap > etol)? lRows + 2 : lRows + 1; // YX: nonzero gap add a constraint
     double lObjSense(localModel_->getLowerObjSense());
     double *lObjCoeff(localModel_->getLowerObjCoeffs());
     int *lRowInd(localModel_->getLowerRowInd());
@@ -930,6 +938,15 @@ MibSCutGenerator::findLowerLevelSol(double *uselessIneqs, double *lowerLevelSol,
 	newMatrix->appendRow(addedRow);
 	addedRow.clear();
     }
+    
+    // YX: for nonzero gap add an constraint: d^2y >= d^2y^*(1+gap)
+    if(targetGap > etol){
+      for(i = 0; i < lCols; i++){
+        addedRow.insert(i, -lObjCoeff[i] * lObjSense);
+      }
+      newMatrix->appendRow(addedRow);
+      addedRow.clear();
+    }
 
     //filling row bounds
     CoinFillN(newRowLb, newNumRows, -1 * infinity);
@@ -952,6 +969,18 @@ MibSCutGenerator::findLowerLevelSol(double *uselessIneqs, double *lowerLevelSol,
 	else{
 	    assert(0);
 	}
+    }
+    
+    //YX: set cosntraint UB: d^2y >= d^2y^*(1+gap); convert row sense to L
+    if(targetGap > etol){
+      for(i = 0; i < lCols; i++){
+        templObj += lObjSense * lObjCoeff[i] * optLowerSol[i]; // YX: track d^2y^*
+      }
+      if(templObj > 0){
+        newRowUb[newNumRows-1] = -templObj - (templObj * gap/100); 
+      }else{
+        newRowUb[newNumRows-1] = -templObj + (templObj * gap/100); 
+      }
     }
 
     //filling col bounds
@@ -1077,7 +1106,9 @@ MibSCutGenerator::findLowerLevelSol(double *uselessIneqs, double *lowerLevelSol,
 	    //the optimal solution of relaxation which satisfies integrality requirements
 	    //throw CoinError("The MIP which gives the best lower-level sol, cannot be infeasible!",
            //		    "findLowerLevelSol", "MibSCutGenerator");
-	}
+      if(targetGap > etol){
+        std::cout << "Type2IC aux MILP with optimality gap is infeasible."<<std::endl;     
+      }
     }
 
     delete [] multA2XOpt;
@@ -1124,7 +1155,11 @@ MibSCutGenerator::getAlphaIC(double** extRay, double* uselessIneqs,
     double *lObjCoeffs(localModel_->getLowerObjCoeffs());
     double objSense(localModel_->getLowerObjSense());
     bool getA2Matrix(false), getG2Matrix(false);
-    
+
+    double targetGap(localModel_->MibSPar_->entry(MibSParams::slTargetGap));
+    double gap = (targetGap < etol) ? 0.0 : targetGap;
+    double templObj(0.0); // YX: track SL optimal obj val
+
     if(localModel_->getA2Matrix() == NULL){
 	getA2Matrix = true;
     }
@@ -1174,6 +1209,16 @@ MibSCutGenerator::getAlphaIC(double** extRay, double* uselessIneqs,
     for(i = 0; i < lCols; i++){
 	colIndex = lColInd[i];
 	rhs[lRows] += objSense * lObjCoeffs[i] * (lpSol[colIndex] - lowerSolution[i]);
+	templObj += objSense * lObjCoeffs[i] * lowerSolution[i]; // YX: track d^2y^*
+    }
+
+    // YX: type I intersection IC; -d^2y^* - gap*|-d^2y^*|
+    if ((targetGap > etol) && (!uselessIneqs)){
+      if(templObj > 0){
+        rhs[lRows] += -templObj * gap/100; 
+      }else{
+        rhs[lRows] += templObj * gap/100; 
+      }
     }
 
     for (i = 0; i < numNonBasic; i++){
@@ -1277,6 +1322,11 @@ MibSCutGenerator::findLowerLevelSolImprovingDirectionIC(double *uselessIneqs, do
 		     (MibSParams::maxThreadsLL));
     int whichCutsLL(localModel_->MibSPar_->entry
 		    (MibSParams::whichCutsLL));
+    double targetGap(localModel_->MibSPar_->entry(MibSParams::slTargetGap));
+    double etol(localModel_->etol_);
+    double gap = (targetGap < etol) ? 0.0 : targetGap; // YX: added SL gap 
+    double templObj(0.0); // YX: for nonzero gap, track d^2y^*
+
     double timeLimit(localModel_->AlpsPar()->entry(AlpsParams::timeLimit));
     double remainingTime(0.0);
     bool foundSolution = false;
@@ -1290,7 +1340,7 @@ MibSCutGenerator::findLowerLevelSolImprovingDirectionIC(double *uselessIneqs, do
     int lCols(localModel_->getLowerDim());
     int lRows(localModel_->getLowerRowNum());
     int numContCols(lRows + 2 * lCols);
-    int newNumCols(lCols + numContCols);
+    int newNumRows = (targetGap > etol)? (2 * lRows + 2 * lCols + 2) : (2 * lRows + 2 * lCols + 1); // YX: nonzero gap add a constraint
     int newNumRows(2 * lRows + 2 * lCols + 1);
     double lObjSense(localModel_->getLowerObjSense());
     double *lObjCoeff(localModel_->getLowerObjCoeffs());
@@ -1375,6 +1425,15 @@ MibSCutGenerator::findLowerLevelSolImprovingDirectionIC(double *uselessIneqs, do
 	    addedRow.clear();
 	}
 
+  // YX: for nonzero gap add an constraint: d^2 \delta y >= -d^2\yhat + d^2y^*(1+gap)
+  if(targetGap > etol){
+    for(i = 0; i < lCols; i++){
+      addedRow.insert(i, -lObjCoeff[i] * lObjSense);
+    }
+    newMatrix->appendRow(addedRow);
+    addedRow.clear();
+  }
+
 	//filling row bounds
 	CoinFillN(newRowLb, newNumRows, -1 * infinity);
 
@@ -1453,6 +1512,22 @@ MibSCutGenerator::findLowerLevelSolImprovingDirectionIC(double *uselessIneqs, do
 	    rhs = origRowUb[rowIndex];
 	}
 	nSolver->setRowUpper(2 * i + 1, rhs - lCoeffsTimesLpSol[i]);
+    }
+    
+    //YX: set cosntraint UB: d^2 \delta y >= -d^2\yhat + d^2y^*(1+gap); convert row sense to L
+    if(targetGap > etol){
+      rhs = 0;
+      for(i = 0; i < lCols; i++){
+        colIndex = lColInd[i];
+        rhs += lObjSense * lObjCoeffs[i] * (lpSol[colIndex] - lowerSolution[i]);
+        templObj += lObjSense * lObjCoeff[i] * lowerSolution[i]; // YX: track d^2y^*
+      }
+      if(templObj > 0){
+        rhs += -templObj * gap/100;
+      }else{
+        rhs += templObj * gap/100; 
+      }
+      nSolver->setRowUpper(newNumRows-1, rhs);
     }
 
     //modifying col bounds
@@ -1539,6 +1614,9 @@ MibSCutGenerator::findLowerLevelSolImprovingDirectionIC(double *uselessIneqs, do
 	//std::cout << "current time = " << timeLimit - localModel_->broker_->subTreeTimer().getTime() << std::endl;
 	//throw CoinError("The MIP which is solved for ImprovingDirectionIC, cannot be infeasible!",
 	//		"findLowerLevelSolImprovingDirectionIC", "MibSCutGenerator");
+      if(targetGap > etol){
+        std::cout << "Watermelon/IDIC aux MILP with optimality gap is infeasible." << std::endl;     
+      }    
     }
     delete [] lCoeffsTimesLpSol;
     return foundSolution;
