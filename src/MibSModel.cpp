@@ -4151,7 +4151,7 @@ MibSModel::printProblemInfo(){
     //   writeParameters(std::cout);
     //}
     
-    //YX: Setting "slTargetGap" parameter
+    //YX: Printing "slTargetGap" parameter; setting it as a model property?
 
     if (printProblemInfo == true){
        if(MibSPar_->entry(MibSParams::slTargetGap) > -1){
