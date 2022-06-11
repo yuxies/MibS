@@ -72,6 +72,8 @@ MibSParams::createKeywordList() {
    keys_.push_back(make_pair(std::string("MibS_printParameters"),
 			     AlpsParameter(AlpsBoolPar, printParameters)));
 
+   keys_.push_back(make_pair(std::string("MibS_findPesSol"),
+			     AlpsParameter(AlpsBoolPar, findPesSol))); // YX: pessimistic case
    //--------------------------------------------------------
    // BoolArrayPar
    //--------------------------------------------------------
@@ -318,6 +320,8 @@ MibSParams::setDefaultEntries() {
    setEntry(useNewPureIntCut, false);
 
    setEntry(printParameters, false);
+   
+   setEntry(findPesSol, false);   
 
    //-------------------------------------------------------------
    // Int Parameters.
