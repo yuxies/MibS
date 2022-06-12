@@ -889,16 +889,20 @@ MibSCutGenerator::findLowerLevelSol(double *uselessIneqs, double *lowerLevelSol,
     int *integerVars = new int[newNumCols];
     CoinZeroN(integerVars, newNumCols);
 
+  //   if(!localModel_->getA2Matrix()){
+	// getA2Matrix = true;
+  //   }
+
+  //   if(!localModel_->getG2Matrix()){
+	// getG2Matrix = true;
+  //   }
+
+  //   if((getA2Matrix) || (getG2Matrix)){
+	// getLowerMatrices(false, getA2Matrix, getG2Matrix);
+  //   }
+
     if(!localModel_->getA2Matrix()){
-	getA2Matrix = true;
-    }
-
-    if(!localModel_->getG2Matrix()){
-	getG2Matrix = true;
-    }
-
-    if((getA2Matrix) || (getG2Matrix)){
-	getLowerMatrices(false, getA2Matrix, getG2Matrix);
+      localModel_->setCoeffMatrices();
     }
 
     //extracting optimal first-level solution of the relaxation problem and
@@ -1161,18 +1165,22 @@ MibSCutGenerator::getAlphaIC(double** extRay, double* uselessIneqs,
     double gap = (targetGap < etol) ? 0.0 : targetGap;
     double templObj(0.0); // YX: track SL optimal obj val
 
-    if(localModel_->getA2Matrix() == NULL){
-	getA2Matrix = true;
+  //   if(localModel_->getA2Matrix() == NULL){
+	// getA2Matrix = true;
+  //   }
+
+  //   if(localModel_->getG2Matrix() == NULL){
+	// getG2Matrix = true;
+  //   }
+
+  //   if((getA2Matrix) || (getG2Matrix)){
+	// getLowerMatrices(false, getA2Matrix, getG2Matrix);
+  //   }
+
+    if(!localModel_->getA2Matrix()){
+      localModel_->setCoeffMatrices();
     }
 
-    if(localModel_->getG2Matrix() == NULL){
-	getG2Matrix = true;
-    }
-
-    if((getA2Matrix) || (getG2Matrix)){
-	getLowerMatrices(false, getA2Matrix, getG2Matrix);
-    }
-    
     CoinPackedMatrix *matrixA2 = localModel_->getA2Matrix();
     CoinPackedMatrix *matrixG2 = localModel_->getG2Matrix();
 
@@ -1363,16 +1371,20 @@ MibSCutGenerator::findLowerLevelSolImprovingDirectionIC(double *uselessIneqs, do
 
     origMatrix.reverseOrdering();
     
+  //   if(!localModel_->getLowerConstCoefMatrix()){
+	// getA2G2Matrix = true;
+  //   }
+
+  //   if(!localModel_->getG2Matrix()){
+	// getG2Matrix = true;
+  //   }
+
+  //   if((getA2G2Matrix) || (getG2Matrix)){
+	// getLowerMatrices(getA2G2Matrix, false, getG2Matrix);
+  //   }
+
     if(!localModel_->getLowerConstCoefMatrix()){
-	getA2G2Matrix = true;
-    }
-
-    if(!localModel_->getG2Matrix()){
-	getG2Matrix = true;
-    }
-
-    if((getA2G2Matrix) || (getG2Matrix)){
-	getLowerMatrices(getA2G2Matrix, false, getG2Matrix);
+      localModel_->setCoeffMatrices();
     }
 
     CoinPackedMatrix *matrixA2G2 = localModel_->getLowerConstCoefMatrix();
@@ -6543,6 +6555,7 @@ MibSCutGenerator::getBindingConsBasis()
 }
 
 //#############################################################################
+/**
 void
 MibSCutGenerator::getLowerMatrices(bool getLowerConstCoefMatrix,
 				   bool getA2Matrix, bool getG2Matrix)
@@ -6640,4 +6653,4 @@ MibSCutGenerator::getLowerMatrices(bool getLowerConstCoefMatrix,
 	localModel_->setG2Matrix(matrixG2);
     }
 
-}
+}**/
