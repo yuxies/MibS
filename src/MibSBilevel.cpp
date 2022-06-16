@@ -1077,21 +1077,17 @@ MibSBilevel::setUpUBModel(OsiSolverInterface * oSolver, double objValLL,
     int * varType = model_->varType_;
 
     int i(0), index1(0);
-    double value(0.0);
+    double value(0.0), objUb(0.0);
 
     int uCols(model_->getUpperDim());
     int lCols(model_->getLowerDim());
     int rowNum(model_->getNumOrigCons() + 1);
     int colNum(model_->getNumOrigVars());
     int * uColIndices(model_->getUpperColInd());
-    double gap = (targetGap < model_->etol_) ? 0.0 : targetGap; // YX: added SL gap
-    double objUb(0.0);
+    double gap = (targetGap < model_->getTolerance()) ? 0.0 : targetGap; // YX: added SL gap
+
     // YX: d2^y <= phi(A^x) + \delta * abs(phi(A^x))
-    if(objValLL > 0){
-        objUb = objValLL + objValLL* gap/100;
-    }else{
-        objUb = objValLL - objValLL* gap/100;
-    }
+    objUb = objValLL + fabs(objValLL) * gap/100;
 
     if(newOsi){
 	double objSense(model_->getLowerObjSense());
@@ -1255,14 +1251,10 @@ MibSBilevel::setUpPesModel(OsiSolverInterface * oSolver, double objValLL,
    int colNum(model_->getNumOrigVars());
    int *uColIndices(model_->getUpperColInd());
    int *fixedInd(model_->getFixedInd());
-   double gap = (targetGap < model_->etol_) ? 0.0 : targetGap; // YX: added SL gap
+   double gap = (targetGap < model_->getTolerance()) ? 0.0 : targetGap; // YX: added SL gap
 
    // YX: d2^y <= phi(A^x) + \delta * abs(phi(A^x))
-   if(objValLL > 0){ // YX: change to abs value later
-      objUb = objValLL + objValLL* gap/100;
-   }else{
-      objUb = objValLL - objValLL* gap/100;
-   }
+   objUb = objValLL + fabs(objValLL) * gap/100;
 
    if (!lpSol){
       lpSol = oSolver->getColSolution();
