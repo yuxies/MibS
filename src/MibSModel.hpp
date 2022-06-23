@@ -504,7 +504,10 @@ public:
     /** Get the lower-level row number **/
     int getLowerRowNum() {return lowerRowNum_;}
 
-    /** Get bjective sense of lower-level problem **/
+    /** Get the number of UL columns in LL problem array  **/
+    int getSizeFixedInd() {return sizeFixedInd_;}
+
+    /** Get objective sense of lower-level problem **/
     double getLowerObjSense() {return lowerObjSense_;}
 
     /** Get the tolerance **/
