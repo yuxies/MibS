@@ -827,7 +827,6 @@ MibSCutGenerator::findLowerLevelSol(double *uselessIneqs, double *lowerLevelSol,
     double timeLimit(localModel_->AlpsPar()->entry(AlpsParams::timeLimit));
     double remainingTime(0.0);
 
-    // bool getA2Matrix(false), getG2Matrix(false);
     OsiSolverInterface * oSolver = localModel_->solver();
     double infinity(oSolver->getInfinity());
     int i(0);
@@ -889,18 +888,6 @@ MibSCutGenerator::findLowerLevelSol(double *uselessIneqs, double *lowerLevelSol,
     CoinZeroN(newObjCoeff, newNumCols);
     int *integerVars = new int[newNumCols];
     CoinZeroN(integerVars, newNumCols);
-
-  //   if(!localModel_->getA2Matrix()){
-	// getA2Matrix = true;
-  //   }
-
-  //   if(!localModel_->getG2Matrix()){
-	// getG2Matrix = true;
-  //   }
-
-  //   if((getA2Matrix) || (getG2Matrix)){
-	// getLowerMatrices(false, getA2Matrix, getG2Matrix);
-  //   }
 
     if(!localModel_->getA2Matrix()){
       localModel_->setCoeffMatrices();
@@ -1153,23 +1140,10 @@ MibSCutGenerator::getAlphaIC(double** extRay, double* uselessIneqs,
     char *rowSense = localModel_->getOrigRowSense();
     double *lObjCoeffs(localModel_->getLowerObjCoeffs());
     double objSense(localModel_->getLowerObjSense());
-    // bool getA2Matrix(false), getG2Matrix(false);
 
     double targetGap(localModel_->MibSPar_->entry(MibSParams::slTargetGap));
     double gap = (targetGap < etol) ? 0.0 : targetGap;
     double templObj(0.0); // YX: track SL optimal obj val
-
-  //   if(localModel_->getA2Matrix() == NULL){
-	// getA2Matrix = true;
-  //   }
-
-  //   if(localModel_->getG2Matrix() == NULL){
-	// getG2Matrix = true;
-  //   }
-
-  //   if((getA2Matrix) || (getG2Matrix)){
-	// getLowerMatrices(false, getA2Matrix, getG2Matrix);
-  //   }
 
     if(!localModel_->getA2Matrix()){
       localModel_->setCoeffMatrices();
@@ -1322,9 +1296,6 @@ MibSCutGenerator::findLowerLevelSolImprovingDirectionIC(double *uselessIneqs, do
     int whichCutsLL(localModel_->MibSPar_->entry
 		    (MibSParams::whichCutsLL));
     double targetGap(localModel_->MibSPar_->entry(MibSParams::slTargetGap));
-    double etol(localModel_->etol_);
-    double gap = (targetGap < etol) ? 0.0 : targetGap; // YX: added SL gap 
-    double templObj(0.0); // YX: for nonzero gap, track d^2y^*
 
     double timeLimit(localModel_->AlpsPar()->entry(AlpsParams::timeLimit));
     double remainingTime(0.0);
@@ -1332,10 +1303,11 @@ MibSCutGenerator::findLowerLevelSolImprovingDirectionIC(double *uselessIneqs, do
     
     OsiSolverInterface *oSolver = localModel_->solver();
     double infinity(oSolver->getInfinity());
-    // bool getA2G2Matrix(false), getG2Matrix(false);
     int i(0);
     int rowIndex(0), colIndex(0), cntInt(0);
     double rhs(0.0), value(0.0);
+    double etol(localModel_->getTolerance());
+    double templObj(0.0); // YX: for nonzero gap, track d^2y^*
     int lCols(localModel_->getLowerDim());
     int lRows(localModel_->getLowerRowNum());
     int numContCols(lRows + 2 * lCols);
@@ -1350,6 +1322,7 @@ MibSCutGenerator::findLowerLevelSolImprovingDirectionIC(double *uselessIneqs, do
     double *origColLb(localModel_->getOrigColLb());
     double *origColUb(localModel_->getOrigColUb());
     char *origRowSense(localModel_->getOrigRowSense());
+    double gap = (targetGap < etol) ? 0.0 : targetGap; // YX: added SL gap 
     CoinPackedMatrix origMatrix = *localModel_->getOrigConstCoefMatrix();
 
     CoinShallowPackedVector origRow;
@@ -1361,18 +1334,6 @@ MibSCutGenerator::findLowerLevelSolImprovingDirectionIC(double *uselessIneqs, do
 
     origMatrix.reverseOrdering();
     
-  //   if(!localModel_->getLowerConstCoefMatrix()){
-	// getA2G2Matrix = true;
-  //   }
-
-  //   if(!localModel_->getG2Matrix()){
-	// getG2Matrix = true;
-  //   }
-
-  //   if((getA2G2Matrix) || (getG2Matrix)){
-	// getLowerMatrices(getA2G2Matrix, false, getG2Matrix);
-  //   }
-
     if(!localModel_->getLowerConstCoefMatrix()){
       localModel_->setCoeffMatrices();
     }
