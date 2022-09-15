@@ -82,6 +82,7 @@ void
 MibSSolution::print(std::ostream& os) const 
 {
 
+   bool findPesSol(localModel_->MibSPar_->entry(MibSParams::findPesSol));
    std::string inputFormat(localModel_->MibSPar_->entry
 			    (MibSParams::inputFormat));
    int isInterdict = localModel_->MibSPar_->entry(MibSParams::bilevelProblemType);
@@ -168,8 +169,14 @@ MibSSolution::print(std::ostream& os) const
 
    if(&os == &std::cout){
       std::cout << "Number of problems (VF) solved = " << localModel_->counterVF_ << std::endl;
+      if(findPesSol){
+         std::cout << "Number of problems (PES) solved = " << localModel_->counterPES_ << std::endl;
+      }
       std::cout << "Number of problems (UB) solved = " << localModel_->counterUB_ << std::endl;
       std::cout << "Time for solving problem (VF) = " << localModel_->timerVF_ << std::endl;
+      if(findPesSol){
+         std::cout << "Time for solving problem (PES) = " << localModel_->timerPES_ << std::endl;
+      }   
       std::cout << "Time for solving problem (UB) = " << localModel_->timerUB_ << std::endl;
    }
 }
