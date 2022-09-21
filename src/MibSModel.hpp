@@ -242,7 +242,7 @@ private:
     /** Original matrix of constraints coefficients **/
     CoinPackedMatrix *origConstCoefMatrix_;
     
-    // YX: used in pessimistic feasibility check
+    // YX: was used in pessimistic feasibility check
     //we only fill next three matrices if they are required.
     //For now, we only need them for generating IC and ImprovingDirectionIC.
     /** matrix of lower-level coefficients(all constraints are 'L') **/

@@ -564,6 +564,7 @@ MibSCutGenerator::intersectionCuts(BcpsConstraintPool &conPool,
 					   (bS->isProvenOptimal_ == false)))) ||
 	   ((useLinkingSolutionPool == PARAM_ON) &&
 	    ((bS->tagInSeenLinkingPool_ == MibSLinkingPoolTagLowerIsInfeasible) ||
+         (bS->tagInSeenLinkingPool_ == MibSLinkingPoolTagPesIsInfeasible) ||
 	     (bS->tagInSeenLinkingPool_ == MibSLinkingPoolTagUBIsSolved)))){
 	    shouldFindBestSol = false;
 	}
@@ -1756,6 +1757,8 @@ MibSCutGenerator::storeBestSolHypercubeIC(const double* lpSol, double optLowerOb
 
     UBSolver = bS->UBSolver_;
 
+    UBSolver->writeLp("storeBestUBSolver"); // YX: debug only
+
     remainingTime = timeLimit - localModel_->broker_->subTreeTimer().getTime();
 
     if(remainingTime <= localModel_->etol_){
@@ -1844,18 +1847,13 @@ MibSCutGenerator::storeBestSolHypercubeIC(const double* lpSol, double optLowerOb
 
     if((useLinkingSolutionPool) && (isTimeLimReached == false)){
 	//Add to linking solution pool
-	//localModel_->it = localModel_->seenLinkingSolutions.find(linkSol);
-	//localModel_->it->second.tag = MibSSetETagUBIsSolved;
-	//localModel_->it->second.UBObjVal1 = objVal;
 	localModel_->bS_->tagInSeenLinkingPool_ = MibSLinkingPoolTagUBIsSolved;
 	localModel_->seenLinkingSolutions[linkSol].tag = MibSLinkingPoolTagUBIsSolved;
 	localModel_->seenLinkingSolutions[linkSol].UBObjValue = objVal;   
 	if(UBSolver->isProvenOptimal()){
 	    localModel_->seenLinkingSolutions[linkSol].UBSolution.clear();
-	    //localModel_->it->second.UBSol1.clear();
 	    const double * valuesUB = UBSolver->getColSolution();
 	    for(i = 0; i < uN + lN; i++){
-		//localModel_->it->second.UBSol1.push_back(valuesUB[i]);
 		localModel_->seenLinkingSolutions[linkSol].UBSolution.push_back(valuesUB[i]);
 	    }
 	}
@@ -3243,8 +3241,8 @@ MibSCutGenerator::generalizedNoGoodCut(BcpsConstraintPool &conPool)
 				      (bS->isProvenOptimal_ == false)))) ||
        ((useLinkingSolutionPool == PARAM_ON) &&
 	((bS->tagInSeenLinkingPool_ == MibSLinkingPoolTagLowerIsInfeasible) ||
-				     (bS->tagInSeenLinkingPool_ ==
-				      MibSLinkingPoolTagUBIsSolved)))){
+     (bS->tagInSeenLinkingPool_ == MibSLinkingPoolTagPesIsInfeasible) ||
+     (bS->tagInSeenLinkingPool_ == MibSLinkingPoolTagUBIsSolved)))){
 	shouldFindBestSol = false;
     }
 
