@@ -94,11 +94,15 @@ MibSBilevel::createBilevel(CoinPackedVector* sol,
   if(!optLowerSolutionOrd_){
       optLowerSolutionOrd_ = new double[lN];
   }
+  if(!vfLowerSolutionOrd_){
+      vfLowerSolutionOrd_ = new double[lN]; // YX: SL-MILP solutions
+  }
   
   CoinZeroN(upperSolutionOrd_, uN);
   CoinZeroN(lowerSolutionOrd_, lN);
   CoinZeroN(optUpperSolutionOrd_, uN);
   CoinZeroN(optLowerSolutionOrd_, lN);
+  CoinZeroN(vfLowerSolutionOrd_, lN); // YX: SL-MILP solutions
   
   isIntegral_ = true;
   isUpperIntegral_ = true;
@@ -486,7 +490,10 @@ MibSBilevel::checkBilevelFeasibility(bool isRoot)
             }
         }
 
-	    if(useLinkingSolutionPool && isLinkVarsIntegral_){
+        // YX: keep SL-MILP solutions separately for cut generation
+        memcpy(vfLowerSolutionOrd_, lowerSol, sizeof(double) * lN);
+
+        if(useLinkingSolutionPool && isLinkVarsIntegral_){
 		std::copy(lowerSol, lowerSol + lN, shouldStoreValuesLowerSol.begin());
 		
 		//step 12
@@ -651,7 +658,6 @@ MibSBilevel::checkBilevelFeasibility(bool isRoot)
 	if(((!useLinkingSolutionPool || !isLinkVarsIntegral_) && (isProvenOptimal_)) ||
         ((tagInSeenLinkingPool_ == MibSLinkingPoolTagLowerIsFeasible) ||
         (tagInSeenLinkingPool_ == MibSLinkingPoolTagPesIsFeasible) ||
-        (tagInSeenLinkingPool_ == MibSLinkingPoolTagPesIsInfeasible) ||
         (tagInSeenLinkingPool_ == MibSLinkingPoolTagUBIsSolved))){
 
 	if(useLinkingSolutionPool && isLinkVarsIntegral_){
@@ -691,8 +697,7 @@ MibSBilevel::checkBilevelFeasibility(bool isRoot)
                 storeSol = MibSHeurSol;
             }
         }
-    }else if((tagInSeenLinkingPool_ == MibSLinkingPoolTagPesIsFeasible) || 
-        (isPesOptimal)){
+    }else{
         lpPesVal = getRiskFuncVal(lowerSolutionOrd_);           
         // YX: check whether (LR) solution is a pessimistic solution
         if(((lowerObj - objVal) <= fabs(objVal) * gap/100) && (isIntegral_) &&
@@ -727,11 +732,8 @@ MibSBilevel::checkBilevelFeasibility(bool isRoot)
                 }	
             }
         }
-    }else{
-        // YX: if (pes) and (PES-MILP) is unsolved or infeasible; for fractional cut
-        memcpy(optLowerSolutionOrd_, lowerSol, sizeof(double) * lN);
     }
-	
+
 	if(!shouldPrune_){	
 	    //step 18
 	    if(((tagInSeenLinkingPool_ != MibSLinkingPoolTagUBIsSolved) &&
@@ -902,6 +904,7 @@ MibSBilevel::gutsOfDestructor()
 
   if(optUpperSolutionOrd_) delete [] optUpperSolutionOrd_;
   if(optLowerSolutionOrd_) delete [] optLowerSolutionOrd_;
+  if(vfLowerSolutionOrd_) delete [] vfLowerSolutionOrd_; // YX: SL-MILP solutions
   if(upperSolutionOrd_) delete [] upperSolutionOrd_;
   if(lowerSolutionOrd_) delete [] lowerSolutionOrd_;
   if(lSolver_) delete lSolver_;

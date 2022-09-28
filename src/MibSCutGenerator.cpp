@@ -3313,7 +3313,7 @@ MibSCutGenerator::findDeepestLandPCut_ValFunc()
   int numLLCols = localModel_->getLowerDim();
   double * upperSol = bS->upperSolutionOrd_; // UL portion from LR soln
   double * lowerSol = bS->lowerSolutionOrd_; // LL portion from LR soln
-  double * optLowerSol = bS->optLowerSolutionOrd_; // optimal LL solution 
+  double * optLowerSol = bS->vfLowerSolutionOrd_; // optimal LL solution 
 
   /* the negative and positive slopes of the LL value function */
   double leftSlope = localModel_->leftSlope_;
@@ -4275,7 +4275,7 @@ MibSCutGenerator::findDeepestLandPCut1()
   int numLLCols = localModel_->getLowerDim();
   double * upperSol = bS->upperSolutionOrd_; // UL portion from LR soln
   double * lowerSol = bS->lowerSolutionOrd_; // LL portion from LR soln
-  double * optLowerSol = bS->optLowerSolutionOrd_; // optimal LL solution 
+  double * optLowerSol = bS->vfLowerSolutionOrd_; // optimal LL solution 
 
   /* the negative and positive slopes of the LL value function */
   double leftSlope = localModel_->leftSlope_;
@@ -4825,12 +4825,17 @@ MibSCutGenerator::bendersBinaryCut(BcpsConstraintPool &conPool)
 {
     bool allowRemoveCut(localModel_->MibSPar_->entry
 			(MibSParams::allowRemoveCut));
-    
+    int useLinkingSolutionPool(localModel_->MibSPar_->entry
+		   (MibSParams::useLinkingSolutionPool));
+    double targetGap(localModel_->MibSPar_->entry(MibSParams::slTargetGap));
+
+    MibSBilevel *bS = localModel_->bS_;
     OsiSolverInterface *solver = localModel_->solver();
     int i(0), index(0), numCuts(0);
     double cutub(0.0), cutlb(-solver->getInfinity()), bigM(0.0);
     double lObjVal(localModel_->bS_->objVal_);
     double etol(localModel_->etol_);
+    double gap = (targetGap < etol) ? 0.0 : targetGap; // YX: added SL gap
     int uN(localModel_->getUpperDim());
     int lN(localModel_->getLowerDim());
     int *varType(localModel_->getVarType());
@@ -4840,10 +4845,7 @@ MibSCutGenerator::bendersBinaryCut(BcpsConstraintPool &conPool)
     double lowerObjSense(localModel_->getLowerObjSense());
     const double *sol(solver->getColSolution());
 
-    int useLinkingSolutionPool(localModel_->MibSPar_->entry
-		   (MibSParams::useLinkingSolutionPool));
-
-    MibSBilevel *bS = localModel_->bS_;
+    bool shouldFindBestSol(true);
 
     std::vector<int> indexList;
     std::vector<double> valsList;
@@ -4894,7 +4896,7 @@ MibSCutGenerator::bendersBinaryCut(BcpsConstraintPool &conPool)
 	}
     }
 
-    cutub += lObjVal;
+    cutub += lObjVal * (1 + gap/100); // YX: add SL gap to bound
 
     assert(indexList.size() == valsList.size());
     numCuts += addCut(conPool, cutlb, cutub, indexList, valsList, allowRemoveCut);
@@ -5522,7 +5524,7 @@ MibSCutGenerator::bendersBinaryCutCurrent(BcpsConstraintPool &conPool)
 
   double * upperSol = bS->upperSolutionOrd_; // UL portion from LR soln
   double * lowerSol = bS->lowerSolutionOrd_; // LL portion from LR soln
-  double * optLowerSol = bS->optLowerSolutionOrd_; // optimal LL solution 
+  double * optLowerSol = bS->vfLowerSolutionOrd_; // optimal LL solution 
 
   /* 
      returns a double with the values [alpha | beta | gamma]
@@ -5608,6 +5610,7 @@ MibSCutGenerator::bendersInterdictionOneCut(BcpsConstraintPool &conPool, double 
   //    (localModel_->MibSPar_->entry(MibSParams::branchStrategy));
 
   bool allowRemoveCut(localModel_->MibSPar_->entry(MibSParams::allowRemoveCut));
+  double targetGap(localModel_->MibSPar_->entry(MibSParams::slTargetGap));
 
   //when the branching strategy is fractional and the optimal
   //solution of relaxation is integer, we are forced to generate cut.
@@ -5627,6 +5630,7 @@ MibSCutGenerator::bendersInterdictionOneCut(BcpsConstraintPool &conPool, double 
   double * lObjCoeffs = localModel_->getLowerObjCoeffs();
   double cutlb(-localModel_->solver()->getInfinity());
   double cutub(0.0);
+  double gap = (targetGap < etol) ? 0.0 : targetGap; // YX: added SL gap
   std::vector<int> indexList;
   std::vector<double> valsList;
   int bigM(10000);
@@ -5667,6 +5671,7 @@ MibSCutGenerator::bendersInterdictionOneCut(BcpsConstraintPool &conPool, double 
       }
   }
   assert(indexList.size() == valsList.size());
+  cutub = cutub * (1 + gap/100); // YX: add SL gap to bound
   numCuts += addCut(conPool, cutlb, cutub, indexList, valsList, allowRemoveCut);
 
   indexList.clear();
@@ -5991,7 +5996,7 @@ MibSCutGenerator::generateConstraints(BcpsConstraintPool &conPool)
            localModel_->MibSPar_->entry(MibSParams::bendersInterdictionCutType);
         if(bendersInterdictionCutType == MibSBendersInterdictionCutTypeJustOneCut){
            numCuts += bendersInterdictionOneCut(conPool,
-                                                bS->optLowerSolutionOrd_);
+                                                bS->vfLowerSolutionOrd_);
         }
         else{
            numCuts += bendersInterdictionMultipleCuts(conPool);
@@ -6000,27 +6005,27 @@ MibSCutGenerator::generateConstraints(BcpsConstraintPool &conPool)
      
      if (useImprovingSolutionIC == PARAM_ON){
         cutType = MibSIntersectionCutImprovingSolution;
-        numCuts += intersectionCuts(conPool, bS->optLowerSolutionOrd_, cutType);
+        numCuts += intersectionCuts(conPool, bS->vfLowerSolutionOrd_, cutType);
      }
      
      if (useImprovingDirectionIC == PARAM_ON){
         cutType = MibSIntersectionCutImprovingDirection;
-        numCuts += intersectionCuts(conPool, bS->optLowerSolutionOrd_, cutType);
+        numCuts += intersectionCuts(conPool, bS->vfLowerSolutionOrd_, cutType);
      }
      
      if (useHypercubeIC == PARAM_ON){
         cutType = MibSIntersectionCutHypercube;
-        numCuts += intersectionCuts(conPool, bS->optLowerSolutionOrd_, cutType);
+        numCuts += intersectionCuts(conPool, bS->vfLowerSolutionOrd_, cutType);
      }
      
      if (useTenderIC == PARAM_ON){
         cutType = MibSIntersectionCutTender;
-        numCuts += intersectionCuts(conPool, bS->optLowerSolutionOrd_, cutType);
+        numCuts += intersectionCuts(conPool, bS->vfLowerSolutionOrd_, cutType);
      }
      
      if (useHybridIC == PARAM_ON){
         cutType = MibSIntersectionCutHybrid;
-        numCuts += intersectionCuts(conPool, bS->optLowerSolutionOrd_, cutType);
+        numCuts += intersectionCuts(conPool, bS->vfLowerSolutionOrd_, cutType);
      }
      
      if (useGeneralizedNoGoodCut == PARAM_ON){
@@ -6045,7 +6050,7 @@ MibSCutGenerator::generateConstraints(BcpsConstraintPool &conPool)
            localModel_->MibSPar_->entry(MibSParams::bendersInterdictionCutType);
         if(bendersInterdictionCutType == MibSBendersInterdictionCutTypeJustOneCut){
            numCuts += bendersInterdictionOneCut(conPool,
-                                                bS->optLowerSolutionOrd_);
+                                                bS->vfLowerSolutionOrd_);
         }
         else{
            numCuts += bendersInterdictionMultipleCuts(conPool);
@@ -6055,17 +6060,17 @@ MibSCutGenerator::generateConstraints(BcpsConstraintPool &conPool)
           relaxedObjVal > localModel_->bS_->objVal_ + localModel_->etol_) ||
           localModel_->MibSPar_->entry(MibSParams::bilevelFreeSetTypeISIC) == 1)){
         cutType = MibSIntersectionCutImprovingSolution;
-        numCuts += intersectionCuts(conPool, bS->optLowerSolutionOrd_, cutType);
+        numCuts += intersectionCuts(conPool, bS->vfLowerSolutionOrd_, cutType);
      }
 
      if (useImprovingDirectionIC == PARAM_ON){
         cutType = MibSIntersectionCutImprovingDirection;
-        numCuts += intersectionCuts(conPool, bS->optLowerSolutionOrd_, cutType);
+        numCuts += intersectionCuts(conPool, bS->vfLowerSolutionOrd_, cutType);
      }
      
      if (useHypercubeIC == PARAM_ON && haveSecondLevelSol){
         cutType = MibSIntersectionCutHypercube;
-        numCuts += intersectionCuts(conPool, bS->optLowerSolutionOrd_, cutType);
+        numCuts += intersectionCuts(conPool, bS->vfLowerSolutionOrd_, cutType);
      }
 
      if (localModel_->allUpperBin_){
@@ -6088,13 +6093,13 @@ MibSCutGenerator::generateConstraints(BcpsConstraintPool &conPool)
      
      if (useImprovingDirectionIC == PARAM_ON){
         cutType = MibSIntersectionCutImprovingDirection;
-        numCuts += intersectionCuts(conPool, bS->optLowerSolutionOrd_, cutType);
+        numCuts += intersectionCuts(conPool, bS->vfLowerSolutionOrd_, cutType);
      }
      if (useImprovingSolutionIC == PARAM_ON && ((haveSecondLevelSol &&
            relaxedObjVal > localModel_->bS_->objVal_ + localModel_->etol_) ||
           localModel_->MibSPar_->entry(MibSParams::bilevelFreeSetTypeISIC) == 1)){ 
         cutType = MibSIntersectionCutImprovingSolution;
-        numCuts += intersectionCuts(conPool, bS->optLowerSolutionOrd_, cutType);
+        numCuts += intersectionCuts(conPool, bS->vfLowerSolutionOrd_, cutType);
      }
   }
   
