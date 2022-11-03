@@ -964,7 +964,7 @@ MibSCutGenerator::findLowerLevelSol(double *uselessIneqs, double *lowerLevelSol,
 	}
     }
     
-    //YX: set cosntraint UB: d^2y >= d^2y^*(1+gap); convert row sense to L
+    //YX: add cosntraint UB: -d^2y <= - d^2y* - gap|d^2y*|
     if(targetGap > etol){
       for(i = 0; i < lCols; i++){
         templObj += lObjSense * lObjCoeff[i] * optLowerSol[i]; // YX: track d^2y^*
@@ -1390,7 +1390,7 @@ MibSCutGenerator::findLowerLevelSolImprovingDirectionIC(double *uselessIneqs, do
 	    addedRow.clear();
 	}
 
-  // YX: for nonzero gap add an constraint: d^2 \delta y >= -d^2\yhat + d^2y^*(1+gap)
+  // YX: for nonzero gap add an constraint: d^2\Dy >= -d^2\yhat + d^2y^*+gap|d^2y^*|
   if(targetGap > etol){
     for(i = 0; i < lCols; i++){
       addedRow.insert(i, -lObjCoeff[i] * lObjSense);
@@ -1479,7 +1479,7 @@ MibSCutGenerator::findLowerLevelSolImprovingDirectionIC(double *uselessIneqs, do
 	nSolver->setRowUpper(2 * i + 1, rhs - lCoeffsTimesLpSol[i]);
     }
     
-    //YX: set cosntraint UB: d^2 \delta y >= -d^2\yhat + d^2y^*(1+gap); convert row sense to L
+    //YX: add cosntraint UB: -d^2\Dy <= d^2\yhat - d^2y* - gap|d^2y*|
     if(targetGap > etol){
       rhs = 0;
       for(i = 0; i < lCols; i++){
@@ -4868,7 +4868,7 @@ MibSCutGenerator::bendersBinaryCut(BcpsConstraintPool &conPool)
       }
     }
 
-    bigM = bigMBendBin_ - lObjVal + 1;
+    bigM = bigMBendBin_ - lObjVal - fabs(lObjVal) * gap/100 + 1;
 
     for(i = 0; i < uN; i++){
 	index = upperColInd[i];
@@ -4896,7 +4896,8 @@ MibSCutGenerator::bendersBinaryCut(BcpsConstraintPool &conPool)
 	}
     }
 
-    cutub += lObjVal * (1 + gap/100); // YX: add SL gap to bound
+    // YX: add SL gap to bound d^2y* + gap|d^2y*|
+    cutub += lObjVal + fabs(lObjVal) * gap/100;
 
     assert(indexList.size() == valsList.size());
     numCuts += addCut(conPool, cutlb, cutub, indexList, valsList, allowRemoveCut);
@@ -5629,7 +5630,7 @@ MibSCutGenerator::bendersInterdictionOneCut(BcpsConstraintPool &conPool, double 
   int * lowerColInd = localModel_->getLowerColInd();
   double * lObjCoeffs = localModel_->getLowerObjCoeffs();
   double cutlb(-localModel_->solver()->getInfinity());
-  double cutub(0.0);
+  double cutub(0.0), tempub(0.0);
   double gap = (targetGap < etol) ? 0.0 : targetGap; // YX: added SL gap
   std::vector<int> indexList;
   std::vector<double> valsList;
@@ -5640,7 +5641,7 @@ MibSCutGenerator::bendersInterdictionOneCut(BcpsConstraintPool &conPool, double 
   for(i = 0; i < uN; i++){
       indexU = upperColInd[i];
       indexL = lowerColInd[i];
-      cutub += lObjCoeffs[i] * lSolution[i];
+      tempub += lObjCoeffs[i] * lSolution[i];
       valU = 0;
       valL = lObjCoeffs[i];
       if(lSolution[i] > etol){
@@ -5671,7 +5672,9 @@ MibSCutGenerator::bendersInterdictionOneCut(BcpsConstraintPool &conPool, double 
       }
   }
   assert(indexList.size() == valsList.size());
-  cutub = cutub * (1 + gap/100); // YX: add SL gap to bound
+
+  // YX: add SL gap to bound d^2y* + gap|d^2y*|
+  cutub = tempub + fabs(tempub) * gap/100;
   numCuts += addCut(conPool, cutlb, cutub, indexList, valsList, allowRemoveCut);
 
   indexList.clear();
