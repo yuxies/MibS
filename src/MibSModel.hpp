@@ -630,8 +630,8 @@ public:
     /** The method that decodes the model from an encoded object. */
     virtual void decodeToSelf(AlpsEncoded&);
 
-    /** YX: Separate and set A1, G1, A2, G2 matrices (with row sense 'L') **/
-    // YX: this was moved from MibSCutGenerator
+    /** Separate and set A1, G1, A2, G2 matrices (with row sense 'L') **/
+    // YX: moved from MibSCutGenerator
     void setCoeffMatrices();
 
     /** Determine the list of first-stage variables participate in second-stage constraints */
@@ -653,6 +653,10 @@ public:
     void runPreprocessor();
 
     void runPreprocessor1();
+
+    /** Solve the other upper-bounding problem with current x **/
+    // YX: for robustness experiment; print result from solver
+    void findDiffObjBound();
 
     double getObjectiveBound();
 

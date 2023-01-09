@@ -904,9 +904,9 @@ MibSBilevel::gutsOfDestructor()
 //#############################################################################
 OsiSolverInterface *
 MibSBilevel::setUpUBModel(OsiSolverInterface * oSolver, double objValLL,
-			      bool newOsi, const double *lpSol)
+			      bool newOsi, int typeRF, const double *lpSol)
 {
-    
+    // YX: typeRF used to identify optimistic (1) or pessimistic (2) setup
     std::string feasCheckSolver =
 	model_->MibSPar_->entry(MibSParams::feasCheckSolver);
     double targetGap(model_->MibSPar_->entry(MibSParams::slTargetGap));
@@ -916,6 +916,10 @@ MibSBilevel::setUpUBModel(OsiSolverInterface * oSolver, double objValLL,
 
     if (!lpSol){
 	lpSol = oSolver->getColSolution();
+    }
+     
+    if(!typeRF){
+        typeRF = (findPes)? 2 : 1; 
     }
 
     int * fixedInd = model_->fixedInd_;
@@ -1024,7 +1028,7 @@ MibSBilevel::setUpUBModel(OsiSolverInterface * oSolver, double objValLL,
 	}
         /** Add pessimistic risk function constraint at (rowNum-2) **/
         // YX: assume optLowerSolutionOrd_ always contains the pes solution; may add to param later
-        if(findPes){
+        if(typeRF > 1){
             CoinPackedVector row2;
             for(i = 0; i < lCols; i++){
                 index1 = lColIndices[i];
@@ -1078,7 +1082,7 @@ MibSBilevel::setUpUBModel(OsiSolverInterface * oSolver, double objValLL,
     else{
 	nSolver = UBSolver_;
 	nSolver->setRowUpper(rowNum-1, objUb); // YX: gap added to phi(A^2x)
-    if(findPes){
+    if(typeRF > 1){
         nSolver->setRowLower(rowNum-2, getRiskFuncVal(optLowerSolutionOrd_));
     }
 	for(i = 0; i < uCols; i++){
