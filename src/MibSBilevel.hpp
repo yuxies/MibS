@@ -119,7 +119,7 @@ public:
 private:
    
     OsiSolverInterface * setUpUBModel(OsiSolverInterface * solver, double objValLL,
-					  bool newOsi, const double *sol = NULL);
+					  bool newOsi, int typeRF = 0, const double *sol = NULL);
     OsiSolverInterface * setUpPesModel(double objValLL, bool newOsi, 
                     const double *sol = NULL); // YX: pessimistic case
     OsiSolverInterface * setUpModel(OsiSolverInterface * solver,

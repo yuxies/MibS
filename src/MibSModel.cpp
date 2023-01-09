@@ -3249,6 +3249,140 @@ MibSModel::printCurSol()
 
 }
 
+//#############################################################################
+void 
+MibSModel::findDiffObjBound()
+{
+   // YX: solve an upperbounding problem for robust analysis
+   // This function should call function from MibS bilevel to solve
+   // an risk function problem; the type of problem is determined 
+   // by findPesSol or not; the function should return the corresponding
+   // llv solution and objective value;
+   // -- Load to the same lp solver or initialize a new solver interface? 
+   // -- Then we need a separate set of containers for solution and objecive value;
+   // -- Here print the solution with new objective value, in format with keywords;
+   bool pesRF(MibSPar_->entry(MibSParams::findPesSol));
+   int whichCutsLL(MibSPar_->entry(MibSParams::whichCutsLL));
+   double lObjVal(0.0), objVal(0.0);
+   double * allSol;
+   int i(0), index(0);
+   int otherRF = (pesRF)? 1 : 2;
+   OsiSolverInterface * dSolver;
+
+   // YX: make up a lpSol; integer
+   allSol = new double[upperDim_+lowerDim_];
+   CoinZeroN(allSol, upperDim_+lowerDim_);
+   
+   LINKING_SOLUTION linkingSolution;
+   std::vector<double> linkSol;
+   for(i = 0; i < upperDim_; i++){
+      index = upperColInd_[i];
+      if(varType_[index] == MibSVarLinking){
+         linkSol.push_back(bS_->optUpperSolutionOrd_[i]);
+      }
+      allSol[index] = bS_->optUpperSolutionOrd_[i];
+	}
+
+   lObjVal = seenLinkingSolutions[linkSol].lowerObjValue;
+   
+   
+   // YX: if RF is pessimistic, compute the bound using optimistic RF
+   if(pesRF){
+      if(bS_->UBSolver_){
+         bS_->UBSolver_ = bS_->setUpUBModel(getSolver(), lObjVal, false, otherRF, allSol);
+      }else{
+         bS_->UBSolver_ = bS_->setUpUBModel(getSolver(), lObjVal, true, otherRF, allSol);
+      }      
+      dSolver = bS_->UBSolver_;
+   }else{
+      if(bS_->pSolver_){
+         bS_->pSolver_ = bS_->setUpPesModel(lObjVal, false, allSol);
+      }else{
+         bS_->pSolver_ = bS_->setUpPesModel(lObjVal, true, allSol);
+      }
+      dSolver = bS_->pSolver_;
+   }
+
+   // dSolver->writeLp("DiffUBSolverLoaded"); // YX: debug only
+   double remainingTime(3600.0);
+
+#if COIN_HAS_SYMPHONY
+   //dynamic_cast<OsiSymSolverInterface *>
+   // (lSolver)->setSymParam("prep_level", -1);
+   sym_environment *env = dynamic_cast<OsiSymSolverInterface *>
+      (dSolver)->getSymphonyEnvironment();
+   //Always uncomment for debugging!!
+   sym_set_dbl_param(env, "time_limit", remainingTime);
+   sym_set_int_param(env, "do_primal_heuristic", FALSE);
+   sym_set_int_param(env, "verbosity", -2);
+   sym_set_int_param(env, "prep_level", -1);
+   // sym_set_int_param(env, "max_active_nodes", maxThreadsLL);
+   sym_set_int_param(env, "tighten_root_bounds", FALSE);
+   sym_set_int_param(env, "max_sp_size", 100);
+   sym_set_int_param(env, "do_reduced_cost_fixing", FALSE);
+   if (whichCutsLL == 0){
+      sym_set_int_param(env, "generate_cgl_cuts", FALSE);
+   }else{
+      sym_set_int_param(env, "generate_cgl_gomory_cuts", GENERATE_DEFAULT);
+   }
+   if (whichCutsLL == 1){
+      sym_set_int_param(env, "generate_cgl_knapsack_cuts",
+               DO_NOT_GENERATE);
+      sym_set_int_param(env, "generate_cgl_probing_cuts",
+               DO_NOT_GENERATE);
+      sym_set_int_param(env, "generate_cgl_clique_cuts",
+               DO_NOT_GENERATE);
+      sym_set_int_param(env, "generate_cgl_twomir_cuts",
+               DO_NOT_GENERATE);
+      sym_set_int_param(env, "generate_cgl_flowcover_cuts",
+               DO_NOT_GENERATE);
+   }
+#endif
+
+   dSolver->branchAndBound();
+   int pos(0);
+   
+   if(dSolver->isProvenOptimal()){
+      const double * valuesUB = dSolver->getColSolution();
+      // std::copy(valuesUB, valuesUB + uN + lN, shouldStoreValuesUBSol.begin());
+      for(i = 0; i < upperDim_ + lowerDim_; i++){
+         pos = binarySearch(0, upperDim_ - 1, i, upperColInd_);
+         if(pos >= 0){
+            // if((dSolver->isInteger(i)) &&
+            // (((valuesUB[i] - floor(valuesUB[i])) < etol_) ||
+            // ((ceil(valuesUB[i]) - valuesUB[i]) < etol_))){
+            //    optUpperSolutionOrd_[pos] = (double) floor(valuesUB[i] + 0.5);
+            // }else{
+            //    optUpperSolutionOrd_[pos] = (double) valuesUB[i];
+            // }
+         }else{
+            pos = binarySearch(0, lowerDim_ - 1, i, lowerColInd_);
+            if((dSolver->isInteger(i)) &&
+            (((valuesUB[i] - floor(valuesUB[i])) < etol_) ||
+            ((ceil(valuesUB[i]) - valuesUB[i]) < etol_))){
+               // temp fix; reuse variables
+               bS_->vfLowerSolutionOrd_[pos] = (double) floor(valuesUB[i] + 0.5);
+            }else{
+               bS_->vfLowerSolutionOrd_[pos] = (double) valuesUB[i];
+            }
+         }
+      }
+      if(!pesRF){
+         objVal = dSolver->getObjValue() * solver()->getObjSense();
+      }else{
+         objVal = bS_->getUpperObj(bS_->vfLowerSolutionOrd_, bS_->optUpperSolutionOrd_);
+      }
+      std::cout<< "Other UB obj is " << objVal << std::endl;
+      for(i = 0; i < lowerDim_; ++i){
+         std::cout << "UB results y[" << i << "] = " << bS_->vfLowerSolutionOrd_[i] << std::endl;
+      }
+   }else{
+      std::cout<< "Ohter UB problem is infeasible." << std::endl;
+   }
+
+   delete allSol;
+
+}
 
 //#############################################################################
 int 
