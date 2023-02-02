@@ -2887,6 +2887,9 @@ MibSModel::findDiffObjBound()
    int otherRF = (pesRF)? 1 : 2;
    OsiSolverInterface * dSolver;
 
+   const double *optVals = dynamic_cast<MibSSolution* >
+      (broker_->getBestKnowledge(AlpsKnowledgeTypeSolution).first)->getValues();
+   
    // YX: make up a lpSol; integer
    allSol = new double[upperDim_+lowerDim_];
    CoinZeroN(allSol, upperDim_+lowerDim_);
@@ -2896,9 +2899,10 @@ MibSModel::findDiffObjBound()
    for(i = 0; i < upperDim_; i++){
       index = upperColInd_[i];
       if(fixedInd_[index] == 1){
-         linkSol.push_back(bS_->optUpperSolutionOrd_[i]);
+         linkSol.push_back(optVals[index]);
       }
-      allSol[index] = bS_->optUpperSolutionOrd_[i];
+      allSol[index] = optVals[index];
+      bS_->optUpperSolutionOrd_[i] = optVals[index];
 	}
 
    lObjVal = seenLinkingSolutions[linkSol].lowerObjValue;
@@ -2921,7 +2925,7 @@ MibSModel::findDiffObjBound()
       dSolver = bS_->pSolver_;
    }
 
-   // dSolver->writeLp("DiffUBSolverLoaded"); // YX: debug only
+   dSolver->writeLp("DiffUBSolverLoaded"); // YX: debug only
    double remainingTime(3600.0);
 
 #if COIN_HAS_SYMPHONY
@@ -2985,17 +2989,20 @@ MibSModel::findDiffObjBound()
             }
          }
       }
-      if(!pesRF){
+      if(pesRF){
          objVal = dSolver->getObjValue() * solver()->getObjSense();
       }else{
          objVal = bS_->getUpperObj(bS_->vfLowerSolutionOrd_, bS_->optUpperSolutionOrd_);
       }
       std::cout<< "Other UB obj is " << objVal << std::endl;
       for(i = 0; i < lowerDim_; ++i){
+         std::cout << "UB results x[" << i << "] = " << bS_->vfLowerSolutionOrd_[i] << std::endl;
+      }
+      for(i = 0; i < lowerDim_; ++i){
          std::cout << "UB results y[" << i << "] = " << bS_->vfLowerSolutionOrd_[i] << std::endl;
       }
    }else{
-      std::cout<< "Ohter UB problem is infeasible." << std::endl;
+      std::cout<< "Other UB problem is infeasible." << std::endl;
    }
 
    delete allSol;
