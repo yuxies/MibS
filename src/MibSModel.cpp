@@ -2883,7 +2883,7 @@ MibSModel::findDiffObjBound()
    int whichCutsLL(MibSPar_->entry(MibSParams::whichCutsLL));
    double lObjVal(0.0), objVal(0.0);
    double * allSol;
-   int i(0), index(0);
+   int i(0), index(0), nearInt(0);
    int otherRF = (pesRF)? 1 : 2;
    OsiSolverInterface * dSolver;
 
@@ -2906,7 +2906,6 @@ MibSModel::findDiffObjBound()
 	}
 
    lObjVal = seenLinkingSolutions[linkSol].lowerObjValue;
-   
    
    // YX: if RF is pessimistic, compute the bound using optimistic RF
    if(pesRF){
@@ -2995,11 +2994,19 @@ MibSModel::findDiffObjBound()
          objVal = bS_->getUpperObj(bS_->vfLowerSolutionOrd_, bS_->optUpperSolutionOrd_);
       }
       std::cout<< "Other UB obj is " << objVal << std::endl;
-      for(i = 0; i < lowerDim_; ++i){
-         std::cout << "UB results x[" << i << "] = " << bS_->vfLowerSolutionOrd_[i] << std::endl;
+      for(i = 0; i < upperDim_; ++i){
+         if(bS_->optUpperSolutionOrd_[i] > 1.0e-15 || 
+               bS_->optUpperSolutionOrd_[i] < -1.0e-15) {
+	         nearInt = floor(bS_->optUpperSolutionOrd_[i] + 0.5);
+            std::cout << "UB results x[" << i << "] = " << nearInt << std::endl;
+         }
       }
       for(i = 0; i < lowerDim_; ++i){
-         std::cout << "UB results y[" << i << "] = " << bS_->vfLowerSolutionOrd_[i] << std::endl;
+         if(bS_->vfLowerSolutionOrd_[i] > 1.0e-15 || 
+               bS_->vfLowerSolutionOrd_[i] < -1.0e-15) {
+            nearInt = floor(bS_->vfLowerSolutionOrd_[i] + 0.5);
+            std::cout << "UB results y[" << i << "] = " << nearInt << std::endl;
+         }
       }
    }else{
       std::cout<< "Other UB problem is infeasible." << std::endl;
