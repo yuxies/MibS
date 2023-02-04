@@ -944,7 +944,8 @@ MibSBilevel::setUpUBModel(OsiSolverInterface * oSolver, double objValLL,
 
     int uCols(model_->getUpperDim());
     int lCols(model_->getLowerDim());
-    int rowNum = findPes ? model_->getNumOrigCons() + 2: model_->getNumOrigCons() + 1;
+    // int rowNum = findPes ? model_->getNumOrigCons() + 2: model_->getNumOrigCons() + 1;
+    int rowNum = (typeRF > 1) ? model_->getNumOrigCons() + 2: model_->getNumOrigCons() + 1;
     int colNum(model_->getNumOrigVars());
     int * uColIndices(model_->getUpperColInd());
     double gap = (targetGap < model_->getTolerance()) ? 0.0 : targetGap; // YX: added SL gap
