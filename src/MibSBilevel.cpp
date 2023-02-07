@@ -963,7 +963,7 @@ MibSBilevel::setUpUBModel(OsiSolverInterface * oSolver, double objValLL,
 	const double * origRowUb(model_->getOrigRowUb());
 	double * lObjCoeffs(model_->getLowerObjCoeffs());
 	const double * uObjCoeffs(oSolver->getObjCoefficients());
-    int origRowNum = findPes ? rowNum - 2: rowNum - 1;
+    int origRowNum = (typeRF > 1) ? rowNum - 2: rowNum - 1;
 
 	CoinPackedMatrix matrix = *model_->origConstCoefMatrix_;
 	matrix.reverseOrdering();
