@@ -3272,7 +3272,7 @@ MibSModel::findDiffObjBound()
    const double *optVals = dynamic_cast<MibSSolution* >
       (broker_->getBestKnowledge(AlpsKnowledgeTypeSolution).first)->getValues();
    
-   // YX: make up a lpSol; integer
+   // YX: retrieve optimal solutions
    allSol = new double[upperDim_+lowerDim_];
    CoinZeroN(allSol, upperDim_+lowerDim_);
    
@@ -3351,19 +3351,13 @@ MibSModel::findDiffObjBound()
       for(i = 0; i < upperDim_ + lowerDim_; i++){
          pos = binarySearch(0, upperDim_ - 1, i, upperColInd_);
          if(pos >= 0){
-            // if((dSolver->isInteger(i)) &&
-            // (((valuesUB[i] - floor(valuesUB[i])) < etol_) ||
-            // ((ceil(valuesUB[i]) - valuesUB[i]) < etol_))){
-            //    optUpperSolutionOrd_[pos] = (double) floor(valuesUB[i] + 0.5);
-            // }else{
-            //    optUpperSolutionOrd_[pos] = (double) valuesUB[i];
-            // }
+            // YX: skip upperlevel/1st stage
          }else{
             pos = binarySearch(0, lowerDim_ - 1, i, lowerColInd_);
             if((dSolver->isInteger(i)) &&
             (((valuesUB[i] - floor(valuesUB[i])) < etol_) ||
             ((ceil(valuesUB[i]) - valuesUB[i]) < etol_))){
-               // temp fix; reuse variables
+               // YX: temp fix; reuse variables
                bS_->vfLowerSolutionOrd_[pos] = (double) floor(valuesUB[i] + 0.5);
             }else{
                bS_->vfLowerSolutionOrd_[pos] = (double) valuesUB[i];
@@ -3396,6 +3390,51 @@ MibSModel::findDiffObjBound()
 
    delete allSol;
 
+}
+
+//#############################################################################
+void 
+MibSModel::printSLMILP()
+{
+   // YX: print (SL-MILP) in .lp format for external verification;
+   // -- Modified Loading function in MibSBilevel to pass in optimal x_L 
+
+   double * allSol;
+   int i(0), index(0);
+   long unsigned int length(0);
+   std::string instPath(getUpperFile());
+   std::string fileName("");
+   OsiSolverInterface * lSolver;
+
+   const double *optVals = dynamic_cast<MibSSolution* >
+      (broker_->getBestKnowledge(AlpsKnowledgeTypeSolution).first)->getValues();
+
+   length = instPath.find_last_of("/\\");
+   fileName = instPath.substr(length + 1);
+   
+   // YX: retreive optimal solution
+   allSol = new double[upperDim_+lowerDim_];
+   CoinZeroN(allSol, upperDim_+lowerDim_);
+   
+   for(i = 0; i < upperDim_; i++){
+      index = upperColInd_[i];
+      allSol[index] = optVals[index];
+	}
+   
+   // YX: reload SL-MILP solver for printing
+   if(bS_->lSolver_){
+      bS_->lSolver_ = bS_->setUpModel(getSolver(), false, allSol);
+      lSolver = bS_->lSolver_;
+   }else{
+      throw CoinError("SL-MILP solver was not set up; cannot print model.",
+			"printSLMILP", "MibSModel");
+   }
+   
+   // YX: hard-coded for tempprary use 
+   char writePath[] = "./lpfiles/";
+   lSolver->writeLp(strcat(writePath,fileName.c_str())); 
+
+   delete allSol;
 }
 
 //#############################################################################
