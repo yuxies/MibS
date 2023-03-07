@@ -82,7 +82,8 @@ int main(int argc, char* argv[])
 
 	broker.search(&model);
 	broker.printBestSolution();
-    model.findDiffObjBound();
+    // model.findDiffObjBound();
+    model.printSLMILP();
 
     }
     catch(CoinError& er) {

@@ -658,6 +658,10 @@ public:
     // YX: for robustness experiment; print result from solver
     void findDiffObjBound();
 
+    /** Print (SL-MILP) in .lp format for the optimal x_L **/
+    // YX: for robustness experiment;
+    void printSLMILP();
+
     double getObjectiveBound();
 
     double lowerObjectiveBound();
