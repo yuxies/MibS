@@ -103,6 +103,7 @@ class MibSParams : public AlpsParameterSet {
   enum dblParams{
       boundCutTimeLim,
       slTargetGap, //YX: lower/second level optimality gap
+      testTargetGap, // YX: for robust experiments combinations
       endOfDblParams
   };
 

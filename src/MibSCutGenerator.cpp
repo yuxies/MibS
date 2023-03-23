@@ -1756,6 +1756,7 @@ MibSCutGenerator::storeBestSolHypercubeIC(const double* lpSol, double optLowerOb
     
     int useLinkingSolutionPool(localModel_->MibSPar_->entry
 		   (MibSParams::useLinkingSolutionPool));
+    double targetGap(localModel_->MibSPar()->entry(MibSParams::slTargetGap));
 
     std::vector<double> linkSol;
     for(i = 0; i < uN; i++){
@@ -1768,10 +1769,10 @@ MibSCutGenerator::storeBestSolHypercubeIC(const double* lpSol, double optLowerOb
     OsiSolverInterface *UBSolver;
     
     if(bS->UBSolver_){
-	bS->UBSolver_ = bS->setUpUBModel(localModel_->getSolver(), optLowerObj, false);
+	bS->UBSolver_ = bS->setUpUBModel(localModel_->getSolver(), optLowerObj, false, targetGap);
     }
     else{
-	bS->UBSolver_ = bS->setUpUBModel(localModel_->getSolver(), optLowerObj, true);
+	bS->UBSolver_ = bS->setUpUBModel(localModel_->getSolver(), optLowerObj, true, targetGap);
     }
 
     UBSolver = bS->UBSolver_;
