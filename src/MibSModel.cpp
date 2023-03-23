@@ -2880,6 +2880,7 @@ MibSModel::findDiffObjBound()
    // -- Then we need a separate set of containers for solution and objecive value;
    // -- Here print the solution with new objective value, in format with keywords;
    bool pesRF(MibSPar_->entry(MibSParams::findPesSol));
+   double targetGap(MibSPar_->entry(MibSParams::testTargetGap));
    int whichCutsLL(MibSPar_->entry(MibSParams::whichCutsLL));
    double lObjVal(0.0), objVal(0.0);
    double * allSol;
@@ -2910,21 +2911,21 @@ MibSModel::findDiffObjBound()
    // YX: if RF is pessimistic, compute the bound using optimistic RF
    if(pesRF){
       if(bS_->UBSolver_){
-         bS_->UBSolver_ = bS_->setUpUBModel(getSolver(), lObjVal, false, otherRF, allSol);
+         bS_->UBSolver_ = bS_->setUpUBModel(getSolver(), lObjVal, false, targetGap, otherRF, allSol);
       }else{
-         bS_->UBSolver_ = bS_->setUpUBModel(getSolver(), lObjVal, true, otherRF, allSol);
+         bS_->UBSolver_ = bS_->setUpUBModel(getSolver(), lObjVal, true, targetGap, otherRF, allSol);
       }      
       dSolver = bS_->UBSolver_;
    }else{
       if(bS_->pSolver_){
-         bS_->pSolver_ = bS_->setUpPesModel(lObjVal, false, allSol);
+         bS_->pSolver_ = bS_->setUpPesModel(lObjVal, false, targetGap, allSol);
       }else{
-         bS_->pSolver_ = bS_->setUpPesModel(lObjVal, true, allSol);
+         bS_->pSolver_ = bS_->setUpPesModel(lObjVal, true, targetGap, allSol);
       }
       dSolver = bS_->pSolver_;
    }
 
-   dSolver->writeLp("DiffUBSolverLoaded"); // YX: debug only
+   // dSolver->writeLp("DiffUBSolverLoaded"); // YX: debug only
    double remainingTime(3600.0);
 
 #if COIN_HAS_SYMPHONY
@@ -2987,7 +2988,15 @@ MibSModel::findDiffObjBound()
       }else{
          objVal = bS_->getUpperObj(bS_->vfLowerSolutionOrd_, bS_->optUpperSolutionOrd_);
       }
-      std::cout<< "Other UB obj is " << objVal << std::endl;
+
+      if(pesRF){
+         std::cout<< "Robustness analysis: optimistic alternatives; "; 
+      }else{
+         std::cout<< "Robustness analysis: pessimistic alternatives; "; 
+      }
+      
+      std::cout<< "test optimality gap is set to " << (int) targetGap << std::endl;
+      std::cout<< "The other UB obj value found: " << objVal << std::endl;
       for(i = 0; i < upperDim_; ++i){
          if(bS_->optUpperSolutionOrd_[i] > 1.0e-15 || 
                bS_->optUpperSolutionOrd_[i] < -1.0e-15) {
@@ -3003,7 +3012,7 @@ MibSModel::findDiffObjBound()
          }
       }
    }else{
-      std::cout<< "Other UB problem is infeasible." << std::endl;
+      std::cout<< "The other UB problem is infeasible." << std::endl;
    }
 
    delete allSol;
@@ -3029,6 +3038,8 @@ MibSModel::printSLMILP()
 
    length = instPath.find_last_of("/\\");
    fileName = instPath.substr(length + 1);
+   length = fileName.length();
+   fileName.erase(length-4, 4);
    
    // YX: retreive optimal solution
    allSol = new double[upperDim_+lowerDim_];
@@ -3049,7 +3060,7 @@ MibSModel::printSLMILP()
    }
    
    // YX: hard-coded for tempprary use 
-   char writePath[] = "./lpfiles/";
+   char writePath[] = "/home/kelly/coinbrew/MibS/scripts";
    lSolver->writeLp(strcat(writePath,fileName.c_str())); 
 
    delete allSol;

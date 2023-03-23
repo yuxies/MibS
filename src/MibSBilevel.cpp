@@ -511,9 +511,9 @@ MibSBilevel::checkBilevelFeasibility(bool isRoot)
         // YX: pessimistic case; enter only when isUpperIntegral_?
         if(findPesSol && isUpperIntegral_){
             if(pSolver_){
-                pSolver_ = setUpPesModel(objVal, false);
+                pSolver_ = setUpPesModel(objVal, false, targetGap);
             }else{
-                pSolver_ = setUpPesModel(objVal, true);
+                pSolver_ = setUpPesModel(objVal, true, targetGap);
             }
             
             OsiSolverInterface *pSolver = pSolver_;
@@ -737,9 +737,9 @@ MibSBilevel::checkBilevelFeasibility(bool isRoot)
         // YX: if (pes), then (PES-MILP) is solved and a solution is found;
 
         if(UBSolver_){
-            UBSolver_ = setUpUBModel(model_->getSolver(), objVal, false);
+            UBSolver_ = setUpUBModel(model_->getSolver(), objVal, false, targetGap);
         }else{
-            UBSolver_ = setUpUBModel(model_->getSolver(), objVal, true);
+            UBSolver_ = setUpUBModel(model_->getSolver(), objVal, true, targetGap);
         }
 
         OsiSolverInterface * UBSolver = UBSolver_;
@@ -904,12 +904,12 @@ MibSBilevel::gutsOfDestructor()
 //#############################################################################
 OsiSolverInterface *
 MibSBilevel::setUpUBModel(OsiSolverInterface * oSolver, double objValLL,
-			      bool newOsi, int typeRF, const double *lpSol)
+			      bool newOsi, double targetGap, int typeRF, const double *lpSol)
 {
     // YX: typeRF used to identify optimistic (1) or pessimistic (2) setup
     std::string feasCheckSolver =
 	model_->MibSPar_->entry(MibSParams::feasCheckSolver);
-    double targetGap(model_->MibSPar_->entry(MibSParams::slTargetGap));
+    // double targetGap(model_->MibSPar_->entry(MibSParams::slTargetGap));
     bool findPes(model_->MibSPar_->entry(MibSParams::findPesSol)); // YX: add pes option
 
     OsiSolverInterface * nSolver;
@@ -1102,13 +1102,13 @@ MibSBilevel::setUpUBModel(OsiSolverInterface * oSolver, double objValLL,
 
 //#############################################################################
 OsiSolverInterface *
-MibSBilevel::setUpPesModel(double objValLL, bool newOsi, const double *lpSol)
+MibSBilevel::setUpPesModel(double objValLL, bool newOsi, double targetGap, const double *lpSol)
 {
    /** Setup pessimistic risk function model (PES-MILP) with fixed linking part **/
 
    std::string feasCheckSolver(model_->MibSPar()->entry
       (MibSParams::feasCheckSolver));
-   double targetGap(model_->MibSPar()->entry(MibSParams::slTargetGap));
+   // double targetGap(model_->MibSPar()->entry(MibSParams::slTargetGap));
 
    OsiSolverInterface * nSolver;
 

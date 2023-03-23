@@ -117,8 +117,9 @@ public:
 private:
    
     OsiSolverInterface * setUpUBModel(OsiSolverInterface * solver, double objValLL,
-					  bool newOsi, int typeRF = 0, const double *sol = NULL);
-    OsiSolverInterface * setUpPesModel(double objValLL, bool newOsi, 
+					  bool newOsi, double targetGap, int typeRF = 0, 
+                      const double *sol = NULL); // YX: for experiment parameters
+    OsiSolverInterface * setUpPesModel(double objValLL, bool newOsi, double targetGap,
                     const double *sol = NULL); // YX: pessimistic case
     OsiSolverInterface * setUpModel(OsiSolverInterface * solver,
 				    bool newOsi, const double *sol = NULL);
