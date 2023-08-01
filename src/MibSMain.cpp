@@ -82,9 +82,12 @@ int main(int argc, char* argv[])
 
 	broker.search(&model);
 	broker.printBestSolution();
-    model.findDiffObjBound();
+    // model.findDiffObjBound();
     // model.printSLMILP();
-
+    if(model.MibSPar()->entry(MibSParams::testAllRFGaps)){
+        model.findAllRFBounds();
+    }
+    
     }
     catch(CoinError& er) {
 	std::cerr << "ERROR:" << er.message() << std::endl

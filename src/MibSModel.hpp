@@ -654,9 +654,13 @@ public:
 
     void runPreprocessor1();
 
-    /** Solve the other upper-bounding problem with current x **/
+    /** Solve the other upper bounding problem using x obtained **/
     // YX: for robustness experiment; print result from solver
     void findDiffObjBound();
+
+    /** Solve all other upper bounding problems using x obtained **/
+    // YX: for robustness experiment; print result from solver
+    void findAllRFBounds();
 
     /** Print (SL-MILP) in .lp format for the optimal x_L **/
     // YX: for robustness experiment;

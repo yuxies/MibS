@@ -68,6 +68,9 @@ MibSParams::createKeywordList() {
 
    keys_.push_back(make_pair(std::string("MibS_findPesSol"),
 			     AlpsParameter(AlpsBoolPar, findPesSol))); // YX: pessimistic case
+
+   keys_.push_back(make_pair(std::string("MibS_testAllRFGaps"),
+			     AlpsParameter(AlpsBoolPar, testAllRFGaps))); // YX: all gap+RF UB problems
    //--------------------------------------------------------
    // BoolArrayPar
    //--------------------------------------------------------
@@ -286,7 +289,9 @@ MibSParams::setDefaultEntries() {
 
    setEntry(useNewPureIntCut, false);
 
-   setEntry(findPesSol, false);   
+   setEntry(findPesSol, false);
+
+   setEntry(testAllRFGaps, false);   
 
    //-------------------------------------------------------------
    // Int Parameters.
