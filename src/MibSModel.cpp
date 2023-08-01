@@ -3254,13 +3254,13 @@ void
 MibSModel::findDiffObjBound()
 {
    // YX: solve an upperbounding problem for robust analysis
-   // This function should call function from MibS bilevel to solve
-   // an risk function problem; the type of problem is determined 
-   // by findPesSol or not; the function should return the corresponding
-   // llv solution and objective value;
-   // -- Load to the same lp solver or initialize a new solver interface? 
-   // -- Then we need a separate set of containers for solution and objecive value;
-   // -- Here print the solution with new objective value, in format with keywords;
+   // This function use the setup from MibS bilevel to solve
+   // an risk function problem for the given test target gap; the type of problem  
+   // is determined findPesSol or parameter; the function will return the 
+   // corresponding llv solutions and objective value;
+   // -- Initialize a new solver interface;
+   // -- Reuse the VF containers for solution and objecive value;
+   // -- Print the solutions with new objective value, in format with keywords;
    bool pesRF(MibSPar_->entry(MibSParams::findPesSol));
    double targetGap(MibSPar_->entry(MibSParams::testTargetGap));
    int whichCutsLL(MibSPar_->entry(MibSParams::whichCutsLL));
@@ -3273,6 +3273,10 @@ MibSModel::findDiffObjBound()
    const double *optVals = dynamic_cast<MibSSolution* >
       (broker_->getBestKnowledge(AlpsKnowledgeTypeSolution).first)->getValues();
    
+   if(targetGap < 0){
+      targetGap = MibSPar_->entry(MibSParams::slTargetGap); 
+   }
+
    // YX: retrieve optimal solutions
    allSol = new double[upperDim_+lowerDim_];
    CoinZeroN(allSol, upperDim_+lowerDim_);
@@ -3400,6 +3404,171 @@ MibSModel::findDiffObjBound()
    delete allSol;
 
 }
+
+//#############################################################################
+void 
+MibSModel::findAllRFBounds()
+{
+   // YX: solve all upperbounding problems for robust analysis
+   // This function use the setup from MibS bilevel to solve
+   // all other risk function problems with various delta/gap level, except the 
+   // solved one: using findPesSol determine RF types; the function will return the 
+   // corresponding llv solutions and objective values; see findDiffObjBound();
+   bool pesRF(MibSPar_->entry(MibSParams::findPesSol));
+   int whichCutsLL(MibSPar_->entry(MibSParams::whichCutsLL));
+   double lObjVal(0.0), objVal(0.0), trgtGap(0.0);
+   double remainingTime(3600.0);
+   double * allSol;
+   int i(0), j(0), index(0), nearInt(0), whichRF(0), pos(0);
+   // int otherRF = (pesRF)? 1 : 2;
+   std::vector<double> targetGaps{20, 10, 0};
+   OsiSolverInterface * dSolver;
+
+   const double *optVals = dynamic_cast<MibSSolution* >
+      (broker_->getBestKnowledge(AlpsKnowledgeTypeSolution).first)->getValues();
+   
+   // YX: retrieve optimal solutions
+   allSol = new double[upperDim_+lowerDim_];
+   CoinZeroN(allSol, upperDim_+lowerDim_);
+   
+   LINKING_SOLUTION linkingSolution;
+   std::vector<double> linkSol;
+   for(i = 0; i < upperDim_; i++){
+      index = upperColInd_[i];
+      if(fixedInd_[index] == 1){
+         linkSol.push_back(optVals[index]);
+      }
+      allSol[index] = optVals[index];
+      bS_->optUpperSolutionOrd_[i] = optVals[index];
+	}
+
+   lObjVal = seenLinkingSolutions[linkSol].lowerObjValue;
+   
+   while(!targetGaps.empty()){
+      
+      trgtGap = targetGaps.back();
+      whichRF = 2;
+
+      for(j = 0; j < 2; j++){
+
+         // YX: skip if the scenario is solved
+         // if((trgtGap == MibSPar_->entry(MibSParams::slTargetGap)) 
+         //    && (whichRF % 2 != (int)pesRF)){
+         //    whichRF -= 1;
+         //    continue;
+         // }
+
+         if(whichRF == 1){
+            if(bS_->UBSolver_){
+               bS_->UBSolver_ = bS_->setUpUBModel(getSolver(), lObjVal, false, trgtGap, whichRF, allSol);
+            }else{
+               bS_->UBSolver_ = bS_->setUpUBModel(getSolver(), lObjVal, true, trgtGap, whichRF, allSol);
+            }      
+            dSolver = bS_->UBSolver_;
+         }else{
+            if(bS_->pSolver_){
+               bS_->pSolver_ = bS_->setUpPesModel(lObjVal, false, trgtGap, allSol);
+            }else{
+               bS_->pSolver_ = bS_->setUpPesModel(lObjVal, true, trgtGap, allSol);
+            }
+            dSolver = bS_->pSolver_;
+         }
+
+         // dSolver->writeLp("FindAllSolverLoaded"); // YX: debug only
+         remainingTime = 3600.0;
+
+#if COIN_HAS_SYMPHONY
+         //dynamic_cast<OsiSymSolverInterface *>
+         // (lSolver)->setSymParam("prep_level", -1);
+         sym_environment *env = dynamic_cast<OsiSymSolverInterface *>
+            (dSolver)->getSymphonyEnvironment();
+         //Always uncomment for debugging!!
+         sym_set_dbl_param(env, "time_limit", remainingTime);
+         sym_set_int_param(env, "do_primal_heuristic", FALSE);
+         sym_set_int_param(env, "verbosity", -2);
+         sym_set_int_param(env, "prep_level", -1);
+         // sym_set_int_param(env, "max_active_nodes", maxThreadsLL);
+         sym_set_int_param(env, "tighten_root_bounds", FALSE);
+         sym_set_int_param(env, "max_sp_size", 100);
+         sym_set_int_param(env, "do_reduced_cost_fixing", FALSE);
+         if (whichCutsLL == 0){
+            sym_set_int_param(env, "generate_cgl_cuts", FALSE);
+         }else{
+            sym_set_int_param(env, "generate_cgl_gomory_cuts", GENERATE_DEFAULT);
+         }
+         if (whichCutsLL == 1){
+            sym_set_int_param(env, "generate_cgl_knapsack_cuts",
+                     DO_NOT_GENERATE);
+            sym_set_int_param(env, "generate_cgl_probing_cuts",
+                     DO_NOT_GENERATE);
+            sym_set_int_param(env, "generate_cgl_clique_cuts",
+                     DO_NOT_GENERATE);
+            sym_set_int_param(env, "generate_cgl_twomir_cuts",
+                     DO_NOT_GENERATE);
+            sym_set_int_param(env, "generate_cgl_flowcover_cuts",
+                     DO_NOT_GENERATE);
+         }
+#endif
+
+         dSolver->branchAndBound();
+         pos = 0;
+         
+         if(dSolver->isProvenOptimal()){
+            const double * valuesUB = dSolver->getColSolution();
+            // std::copy(valuesUB, valuesUB + uN + lN, shouldStoreValuesUBSol.begin());
+            for(i = 0; i < upperDim_ + lowerDim_; i++){
+               pos = binarySearch(0, upperDim_ - 1, i, upperColInd_);
+               if(pos >= 0){
+                  // YX: skip upperlevel/1st stage
+               }else{
+                  pos = binarySearch(0, lowerDim_ - 1, i, lowerColInd_);
+                  if((dSolver->isInteger(i)) &&
+                  (((valuesUB[i] - floor(valuesUB[i])) < etol_) ||
+                  ((ceil(valuesUB[i]) - valuesUB[i]) < etol_))){
+                     // YX: temp fix; reuse variables
+                     bS_->vfLowerSolutionOrd_[pos] = (double) floor(valuesUB[i] + 0.5);
+                  }else{
+                     bS_->vfLowerSolutionOrd_[pos] = (double) valuesUB[i];
+                  }
+               }
+            }
+
+            if(whichRF == 1){
+               objVal = dSolver->getObjValue() * solver()->getObjSense();
+            }else{
+               // YX: NOTE the special UB problem in the Pessimistic Case
+               objVal = bS_->getUpperObj(bS_->vfLowerSolutionOrd_, bS_->optUpperSolutionOrd_);
+            }
+
+            std::cout<< "Robust Analysis RF " << whichRF << " gap " << (int) trgtGap <<": ";
+            std::cout<< "the UB obj value found is " << objVal << std::endl;
+            // for(i = 0; i < upperDim_; ++i){
+            //    if(bS_->optUpperSolutionOrd_[i] > 1.0e-15 || 
+            //          bS_->optUpperSolutionOrd_[i] < -1.0e-15) {
+            //       nearInt = floor(bS_->optUpperSolutionOrd_[i] + 0.5);
+            //       std::cout << "UB results x[" << i << "] = " << nearInt << std::endl;
+            //    }
+            // }
+            // for(i = 0; i < lowerDim_; ++i){
+            //    if(bS_->vfLowerSolutionOrd_[i] > 1.0e-15 || 
+            //          bS_->vfLowerSolutionOrd_[i] < -1.0e-15) {
+            //       nearInt = floor(bS_->vfLowerSolutionOrd_[i] + 0.5);
+            //       std::cout << "UB results y[" << i << "] = " << nearInt << std::endl;
+            //    }
+            // }
+         }else{
+            std::cout<< "Robust Analysis RF " << whichRF << " gap " << (int) trgtGap <<": ";
+            std::cout<< "the UB problem is infeasible." << std::endl;
+         }
+
+         whichRF -= 1;
+      }
+
+      targetGaps.pop_back();
+   }
+
+   delete allSol;
+}   
 
 //#############################################################################
 void 

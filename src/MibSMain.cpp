@@ -85,9 +85,6 @@ int main(int argc, char* argv[])
 #endif
 
 	broker.search(&model);
-	broker.printBestSolution();
-	model.findDiffObjBound();
-	// model.printSLMILP();
 
       std::string solnFile(model.MibSPar()->entry(MibSParams::writeSolnFile));
       if(solnFile.compare("PARAM_NOTSET") != 0){
@@ -95,6 +92,13 @@ int main(int argc, char* argv[])
          broker.printBestSolution(ptr_solnFile);
       }
       broker.printBestSolution();
+
+	model.findDiffObjBound();
+	// model.printSLMILP();
+	if(model.MibSPar()->entry(MibSParams::testAllRFGaps)){
+	   model.findAllRFBounds();
+	}
+    
     }
     catch(CoinError& er) {
 	std::cerr << "ERROR:" << er.message() << std::endl

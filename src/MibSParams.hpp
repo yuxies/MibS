@@ -41,6 +41,7 @@ class MibSParams : public AlpsParameterSet {
      useNewPureIntCut,
      printParameters,
      findPesSol, // YX: pessimistic case
+     testAllRFGaps, // YX: all gap+RF UB problems
      endOfBoolParams
   };
   
