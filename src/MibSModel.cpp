@@ -2882,10 +2882,10 @@ MibSModel::findDiffObjBound()
    bool pesRF(MibSPar_->entry(MibSParams::findPesSol));
    double targetGap(MibSPar_->entry(MibSParams::testTargetGap));
    int whichCutsLL(MibSPar_->entry(MibSParams::whichCutsLL));
-   double lObjVal(0.0), objVal(0.0);
+   int setFindObjRF(MibSPar_->entry(MibSParams::setFindObjRF));
+   double lObjVal(0.0), objVal(0.0), remainingTime(3600.0);
    double * allSol;
-   int i(0), index(0), nearInt(0);
-   int otherRF = (pesRF)? 1 : 2;
+   int i(0), index(0), nearInt(0), otherRF(0), pos(0);
    OsiSolverInterface * dSolver;
 
    const double *optVals = dynamic_cast<MibSSolution* >
@@ -2893,6 +2893,13 @@ MibSModel::findDiffObjBound()
    
    if(targetGap < 0){
       targetGap = MibSPar_->entry(MibSParams::slTargetGap); 
+   }
+    
+   // YX: 1 Optimistic; 2 Pessimistic;
+   if(setFindObjRF > 0){
+      otherRF = setFindObjRF;
+   }else{
+      otherRF = (pesRF)? 1 : 2;
    }
 
    // YX: retrieve optimal solutions
@@ -2912,8 +2919,7 @@ MibSModel::findDiffObjBound()
 
    lObjVal = seenLinkingSolutions[linkSol].lowerObjValue;
    
-   // YX: if RF is pessimistic, compute the bound using optimistic RF
-   if(pesRF){
+   if(otherRF == 1){
       if(bS_->UBSolver_){
          bS_->UBSolver_ = bS_->setUpUBModel(getSolver(), lObjVal, false, targetGap, otherRF, allSol);
       }else{
@@ -2930,7 +2936,7 @@ MibSModel::findDiffObjBound()
    }
 
    // dSolver->writeLp("DiffUBSolverLoaded"); // YX: debug only
-   double remainingTime(3600.0);
+   remainingTime = 3600.0;
 
 #if COIN_HAS_SYMPHONY
    //dynamic_cast<OsiSymSolverInterface *>
@@ -2966,7 +2972,7 @@ MibSModel::findDiffObjBound()
 #endif
 
    dSolver->branchAndBound();
-   int pos(0);
+   pos = 0;
    
    if(dSolver->isProvenOptimal()){
       const double * valuesUB = dSolver->getColSolution();
@@ -2987,13 +2993,14 @@ MibSModel::findDiffObjBound()
             }
          }
       }
-      if(pesRF){
+      
+      if(otherRF == 1){
          objVal = dSolver->getObjValue() * solver()->getObjSense();
       }else{
          objVal = bS_->getUpperObj(bS_->vfLowerSolutionOrd_, bS_->optUpperSolutionOrd_);
       }
 
-      if(pesRF){
+      if(otherRF == 1){
          std::cout<< "Robustness analysis: optimistic alternatives; "; 
       }else{
          std::cout<< "Robustness analysis: pessimistic alternatives; "; 
