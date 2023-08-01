@@ -3038,8 +3038,15 @@ MibSModel::findAllRFBounds()
    double remainingTime(3600.0);
    double * allSol;
    int i(0), j(0), index(0), nearInt(0), whichRF(0), pos(0);
-   // int otherRF = (pesRF)? 1 : 2;
-   std::vector<double> targetGaps{20, 10, 0};
+
+   // YX: C98 compatible
+   // std::vector<double> targetGaps{20, 10, 0};
+   std::vector<double> targetGaps; 
+   targetGaps.reserve(3);
+   targetGaps.push_back(20);
+   targetGaps.push_back(10);
+   targetGaps.push_back(0);
+  
    OsiSolverInterface * dSolver;
 
    const double *optVals = dynamic_cast<MibSSolution* >
