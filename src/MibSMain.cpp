@@ -82,9 +82,11 @@ int main(int argc, char* argv[])
 
 	broker.search(&model);
 	broker.printBestSolution();
-    // model.findDiffObjBound();
+    if(model.MibSPar()->entry(MibSParams::findObjRFGap)){
+        model.findDiffObjBound();
+    }
     // model.printSLMILP();
-    if(model.MibSPar()->entry(MibSParams::testAllRFGaps)){
+    if(model.MibSPar()->entry(MibSParams::findObjAllRFGaps)){
         model.findAllRFBounds();
     }
     

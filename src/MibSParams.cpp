@@ -69,8 +69,11 @@ MibSParams::createKeywordList() {
    keys_.push_back(make_pair(std::string("MibS_findPesSol"),
 			     AlpsParameter(AlpsBoolPar, findPesSol))); // YX: pessimistic case
 
-   keys_.push_back(make_pair(std::string("MibS_testAllRFGaps"),
-			     AlpsParameter(AlpsBoolPar, testAllRFGaps))); // YX: all gap+RF UB problems
+   keys_.push_back(make_pair(std::string("MibS_findObjRFGap"),
+			     AlpsParameter(AlpsBoolPar, findObjRFGap))); // YX: pessimistic case
+
+   keys_.push_back(make_pair(std::string("MibS_findObjAllRFGaps"),
+			     AlpsParameter(AlpsBoolPar, findObjAllRFGaps))); // YX: all gap+RF UB problems
    //--------------------------------------------------------
    // BoolArrayPar
    //--------------------------------------------------------
@@ -291,8 +294,9 @@ MibSParams::setDefaultEntries() {
 
    setEntry(findPesSol, false);
 
-   setEntry(testAllRFGaps, false);   
+   setEntry(findObjRFGap, false);   
 
+   setEntry(findObjAllRFGaps, false);   
    //-------------------------------------------------------------
    // Int Parameters.
    //-------------------------------------------------------------

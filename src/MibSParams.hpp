@@ -40,7 +40,8 @@ class MibSParams : public AlpsParameterSet {
      allowRemoveCut,
      useNewPureIntCut,
      findPesSol, // YX: pessimistic case
-     testAllRFGaps, // YX: all gap+RF UB problems
+     findObjRFGap, // YX: solve an additional UB problem
+     findObjAllRFGaps, // YX: all gap+RF UB problems
      endOfBoolParams
   };
   
