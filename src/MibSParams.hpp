@@ -41,7 +41,7 @@ class MibSParams : public AlpsParameterSet {
      useNewPureIntCut,
      printParameters,
      findPesSol, // YX: pessimistic case
-     findObjRFGap, // YX: solve an additional UB problem
+     findObjRFGap, // YX: solve another UB problem
      findObjAllRFGaps, // YX: all gap+RF UB problems
      endOfBoolParams
   };
@@ -98,6 +98,7 @@ class MibSParams : public AlpsParameterSet {
      boundCutNodeLim,
      relaxTypeParamBoundCut,
      maxCutDepth,
+     setFindObjRF, // YX: set RF type if solve another UB
      endOfIntParams
   };
 

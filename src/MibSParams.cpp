@@ -73,10 +73,10 @@ MibSParams::createKeywordList() {
 			     AlpsParameter(AlpsBoolPar, printParameters)));
 
    keys_.push_back(make_pair(std::string("MibS_findPesSol"),
-			     AlpsParameter(AlpsBoolPar, findPesSol))); // YX: pessimistic case
-
+			     AlpsParameter(AlpsBoolPar, findPesSol))); // YX: pessimistic case 
+   
    keys_.push_back(make_pair(std::string("MibS_findObjRFGap"),
-			     AlpsParameter(AlpsBoolPar, findObjRFGap))); // YX: pessimistic case
+			     AlpsParameter(AlpsBoolPar, findObjRFGap))); // YX: solve another UB problem
 
    keys_.push_back(make_pair(std::string("MibS_findObjAllRFGaps"),
 			     AlpsParameter(AlpsBoolPar, findObjAllRFGaps))); // YX: all gap+RF UB problems
@@ -262,6 +262,9 @@ MibSParams::createKeywordList() {
 
    keys_.push_back(make_pair(std::string("MibS_maxCutDepth"),
    			     AlpsParameter(AlpsIntPar, maxCutDepth)));
+
+   keys_.push_back(make_pair(std::string("MibS_setFindObjRF"),
+               AlpsParameter(AlpsIntPar, setFindObjRF))); // YX: set UB RF
    //--------------------------------------------------------
    // String Parameters.
    //--------------------------------------------------------
@@ -438,6 +441,8 @@ MibSParams::setDefaultEntries() {
    setEntry(relaxTypeParamBoundCut, MibSRelaxTypeParamBoundCutLP);
 
    setEntry(maxCutDepth, ALPS_INT_MAX);
+
+   setEntry(setFindObjRF, 0);
 
    //-------------------------------------------------------------
    // Double Parameters
