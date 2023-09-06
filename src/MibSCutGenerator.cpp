@@ -376,7 +376,8 @@ MibSCutGenerator::intersectionCuts(BcpsConstraintPool &conPool,
 
 	for(i = 0; i < numStruct; i++){
 	    value = lpSol[i];
-	    if(fabs(floor(value + 0.5) - value) <= etol){
+	    if((fabs(floor(value + 0.5) - value) <= etol) &&
+	      (fabs(floor(value + 0.5) - value) > 0)){ // YX: pass zero
 		lpSol[i] = floor(value + 0.5);
 	    }
 	}
@@ -619,7 +620,7 @@ MibSCutGenerator::intersectionCuts(BcpsConstraintPool &conPool,
 		    goto TERM_INTERSECTIONCUT;
                 }                   
 		intersectionFound = getAlphaImprovingDirectionIC(extRay, uselessIneqs, lowerLevelSol,
-							 numStruct, numNonBasic, lpSol, alpha);
+							 optLowerSolution, numStruct, numNonBasic, lpSol, alpha); // YX: add y^* for nonzero gap case
 	        delete [] uselessIneqs;
 	        delete [] lowerLevelSol;
 	        break;
@@ -932,7 +933,7 @@ MibSCutGenerator::findLowerLevelSol(double *uselessIneqs, double *lowerLevelSol,
 	addedRow.clear();
     }
     
-    // YX: for nonzero gap add an constraint: d^2y >= d^2y^*(1+gap)
+    // YX: for nonzero gap add an constraint: -d^2y <= -d^2y^* - gap|d^2y^*|
     if(targetGap > etol){
       for(i = 0; i < lCols; i++){
         addedRow.insert(i, -lObjCoeff[i] * lObjSense);
@@ -964,7 +965,7 @@ MibSCutGenerator::findLowerLevelSol(double *uselessIneqs, double *lowerLevelSol,
 	}
     }
     
-    //YX: add cosntraint UB: -d^2y <= - d^2y* - gap|d^2y*|
+    //YX: add cosntraint UB: -d^2y <= -d^2y* - gap|d^2y*|
     if(targetGap > etol){
       for(i = 0; i < lCols; i++){
         templObj += lObjSense * lObjCoeff[i] * optLowerSol[i]; // YX: track d^2y^*
@@ -1191,7 +1192,7 @@ MibSCutGenerator::getAlphaIC(double** extRay, double* uselessIneqs,
     }
 
     // YX: type I intersection IC; -d^2y^* - gap*|d^2y^*|
-    if ((targetGap > etol) && (!uselessIneqs)){
+    if((targetGap > etol) && (!uselessIneqs)){
       rhs[lRows] += -fabs(templObj) * gap/100; 
     }
 
@@ -1390,7 +1391,7 @@ MibSCutGenerator::findLowerLevelSolImprovingDirectionIC(double *uselessIneqs, do
 	    addedRow.clear();
 	}
 
-  // YX: for nonzero gap add an constraint: d^2\Dy >= -d^2\yhat + d^2y^*+gap|d^2y^*|
+  // YX: for nonzero gap add an constraint: -d^2\Dy <= d^2\yhat - d^2y^* - gap|d^2y^*|
   if(targetGap > etol){
     for(i = 0; i < lCols; i++){
       addedRow.insert(i, -lObjCoeff[i] * lObjSense);
@@ -1479,7 +1480,7 @@ MibSCutGenerator::findLowerLevelSolImprovingDirectionIC(double *uselessIneqs, do
 	nSolver->setRowUpper(2 * i + 1, rhs - lCoeffsTimesLpSol[i]);
     }
     
-    //YX: add cosntraint UB: -d^2\Dy <= d^2\yhat - d^2y* - gap|d^2y*|
+    //YX: modify UB for contraint: -d^2\Dy <= d^2\yhat - d^2y* - gap|d^2y*|
     if(targetGap > etol){
       rhs = 0;
       for(i = 0; i < lCols; i++){
@@ -1553,7 +1554,7 @@ MibSCutGenerator::findLowerLevelSolImprovingDirectionIC(double *uselessIneqs, do
 #endif
     }
 
-    //nSolver->writeLp("water");
+    // nSolver->writeLp("watermelon");
     nSolver->branchAndBound();
 
     if(((feasCheckSolver == "SYMPHONY") && (sym_is_time_limit_reached
@@ -1586,27 +1587,31 @@ MibSCutGenerator::findLowerLevelSolImprovingDirectionIC(double *uselessIneqs, do
 //#############################################################################
 bool
 MibSCutGenerator::getAlphaImprovingDirectionIC(double** extRay, double *uselessIneqs,
-				       double* lowerSolution, int numStruct,
+				       double* lowerSolution, double *optLowerSol, int numStruct,
 				       int numNonBasic, double* lpSol,
 				       std::vector<double> &alphaVec)
 {
     int i, j;
     int cntRows(0), rowIndex(0), colIndex(0);
-    double value(0.0);
+    double value(0.0), templObj(0.0);
     double etol(localModel_->etol_);
     double infinity(localModel_->solver()->getInfinity());
     double alphaUb(infinity);
+    double lObjSense(localModel_->getLowerObjSense());
+    double targetGap(localModel_->MibSPar_->entry(MibSParams::slTargetGap));
+    double gap = (targetGap < etol) ? 0.0 : targetGap; // YX: added BR gap
     bool isUnbounded(true), intersectionFound(false);
     int numCols(localModel_->getNumCols());
     int lCols(localModel_->getLowerDim());
     int lRows(localModel_->getLowerRowNum());
-    int sizeRhs(lRows + 2 * lCols);
+    int sizeRhs = (targetGap < etol) ? (lRows + 2 * lCols) : (lRows + 2 * lCols + 1);
     int *lColInd(localModel_->getLowerColInd());
     int *lRowInd(localModel_->getLowerRowInd());
     double *origRowLb(localModel_->getOrigRowLb());
     double *origRowUb(localModel_->getOrigRowUb());
     double *origColLb(localModel_->getOrigColLb());
     double *origColUb(localModel_->getOrigColUb());
+    double *lObjCoeff(localModel_->getLowerObjCoeffs());
     char *origRowSense(localModel_->getOrigRowSense());
     double *rhs = new double[sizeRhs];
     CoinZeroN(rhs, sizeRhs);
@@ -1656,9 +1661,18 @@ MibSCutGenerator::getAlphaImprovingDirectionIC(double** extRay, double *uselessI
 	}
 	rhs[cntRows + lCols + i] = -1 * origColLb[colIndex] + 1 +
 	    lowerSolution[i] + value;
+	// YX: add description d^2(y_hat + \Dy_hat) >= d^2y^* + gap|d^2y^*|
+	if(targetGap > etol){
+	  rhs[sizeRhs-1] += lObjSense * lObjCoeff[i] * (lpSol[colIndex] + lowerSolution[i]);
+	  templObj += lObjSense * lObjCoeff[i] * optLowerSol[i];
+	}      
     }
 
-    for(i = 0; i < sizeRhs - lCols; i++){
+    if(targetGap > etol){
+      rhs[sizeRhs-1] += -templObj - fabs(templObj) * gap/100; 
+    }
+
+    for(i = 0; i < lRows + lCols; i++){ // YX: WAS (sizeRhs - lCol)
        assert(rhs[i] > 0);
     }
 	
@@ -1670,12 +1684,17 @@ MibSCutGenerator::getAlphaImprovingDirectionIC(double** extRay, double *uselessI
 	    value = ray[lColInd[j]];
 	    coeff[j + lRows] = value;
 	    coeff[j + lRows + lCols] = -1 * value;
+	    // YX: compute coeffs*ray for the new description
+	    if(targetGap > etol){
+	      coeff[sizeRhs-1] += -1 * lObjSense * lObjCoeff[j] * value;
+	    }
 	}
 	alphaUb = infinity;
 	isUnbounded = true;
 	for(j = 0; j < sizeRhs; j++){
-	    //uselessIneqs[j] = 3;
-	    if((uselessIneqs[j] > etol) && (coeff[j] > etol)){
+	    // YX: add nonzero gap condition check      
+	    if(((targetGap > etol) && (j == sizeRhs-1) && (coeff[j] > etol)) ||
+      ((uselessIneqs[j] > etol) && (coeff[j] > etol))){
 		value = rhs[j]/coeff[j];
 		if((alphaUb - value > etol) && (rhs[j] < (infinity/10))){
 		    alphaUb = value;
