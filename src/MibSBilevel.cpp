@@ -1124,7 +1124,7 @@ MibSBilevel::setUpPesModel(double objValLL, bool newOsi, const double *lpSol)
    int rowNum(model_->getNumOrigCons() + 1);
    int colNum(model_->getNumOrigVars());
    int *uColIndices(model_->getUpperColInd());
-   int *fixedInd(model_->getFixedInd());
+   int *varType(model_->getVarType());
    const double *origRowLb(model_->getOrigRowLb());
    const double *origRowUb(model_->getOrigRowUb());
    double gap = (targetGap < model_->getTolerance()) ? 0.0 : targetGap;
@@ -1202,7 +1202,7 @@ MibSBilevel::setUpPesModel(double objValLL, bool newOsi, const double *lpSol)
       /** Fix linking variables **/
       for(i = 0; i < uCols; i++){
          idx = uColIndices[i];
-         if(fixedInd[idx] == 1){
+         if(varType[idx] == MibSVarLinking){
             colLb[idx] = floor(lpSol[idx] + 0.5);
             colUb[idx] = colLb[idx];
          }
@@ -1268,7 +1268,7 @@ MibSBilevel::setUpPesModel(double objValLL, bool newOsi, const double *lpSol)
       /** Update fixed linking variable bounds **/
       for(i = 0; i < uCols; i++){
          idx = uColIndices[i];
-         if(fixedInd[idx] == 1){
+         if(varType[idx] == MibSVarLinking){
             value = floor(lpSol[idx] + 0.5);
             nSolver->setColLower(idx, value);
             nSolver->setColUpper(idx, value);
