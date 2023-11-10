@@ -3449,7 +3449,7 @@ MibSModel::findAllRFBounds()
    std::vector<double> linkSol;
    for(i = 0; i < upperDim_; i++){
       index = upperColInd_[i];
-      if(fixedInd_[index] == 1){
+      if(varType_[index] == MibSVarLinking){
          linkSol.push_back(optVals[index]);
       }
       allSol[index] = optVals[index];
