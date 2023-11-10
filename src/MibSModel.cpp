@@ -3281,7 +3281,7 @@ MibSModel::findDiffObjBound()
    if(setFindObjRF > 0){
       otherRF = setFindObjRF;
    }else{
-      otherRF = (pesRF)? 1 : 2;
+      otherRF = (pesRF)? MibSRiskFuncOptimistic : MibSRiskFuncPessimistic;
    }
 
    // YX: retrieve optimal solutions
@@ -3301,7 +3301,7 @@ MibSModel::findDiffObjBound()
 
    lObjVal = seenLinkingSolutions[linkSol].lowerObjValue;
    
-   if(otherRF == 1){
+   if(otherRF == MibSRiskFuncOptimistic){
       if(bS_->UBSolver_){
          bS_->UBSolver_ = bS_->setUpUBModel(getSolver(), lObjVal, false, targetGap, otherRF, allSol);
       }else{
@@ -3376,13 +3376,13 @@ MibSModel::findDiffObjBound()
          }
       }
       
-      if(otherRF == 1){
+      if(otherRF == MibSRiskFuncOptimistic){
          objVal = dSolver->getObjValue() * solver()->getObjSense();
       }else{
          objVal = bS_->getUpperObj(bS_->vfLowerSolutionOrd_, bS_->optUpperSolutionOrd_);
       }
 
-      if(otherRF == 1){
+      if(otherRF == MibSRiskFuncOptimistic){
          std::cout<< "Robustness analysis: optimistic alternatives; "; 
       }else{
          std::cout<< "Robustness analysis: pessimistic alternatives; "; 
@@ -3417,10 +3417,10 @@ void
 MibSModel::findAllRFBounds()
 {
    // YX: solve all upperbounding problems for robust analysis
-   // This function use the setup from MibS bilevel to solve
-   // all other risk function problems with various delta/gap level, except the 
-   // solved one: using findPesSol determine RF types; the function will return the 
-   // corresponding llv solutions and objective values; see findDiffObjBound();
+   /* This function use the setup from MibS bilevel to solve
+      all other risk function problems with various delta/gap level, except the 
+      solved one: using findPesSol determine RF types; the function will return the 
+      corresponding llv solutions and objective values; see findDiffObjBound(); */
    bool pesRF(MibSPar_->entry(MibSParams::findPesSol));
    int whichCutsLL(MibSPar_->entry(MibSParams::whichCutsLL));
    double lObjVal(0.0), objVal(0.0), trgtGap(0.0);
@@ -3461,18 +3461,18 @@ MibSModel::findAllRFBounds()
    while(!targetGaps.empty()){
       
       trgtGap = targetGaps.back();
-      whichRF = 2;
+      whichRF = MibSRiskFuncPessimistic;
 
       for(j = 0; j < 2; j++){
 
-         // YX: skip if the scenario is solved
+         // YX: skip if the scenario is solved; comment off for verification
          // if((trgtGap == MibSPar_->entry(MibSParams::slTargetGap)) 
          //    && (whichRF % 2 != (int)pesRF)){
          //    whichRF -= 1;
          //    continue;
          // }
 
-         if(whichRF == 1){
+         if(whichRF == MibSRiskFuncOptimistic){
             if(bS_->UBSolver_){
                bS_->UBSolver_ = bS_->setUpUBModel(getSolver(), lObjVal, false, trgtGap, whichRF, allSol);
             }else{
@@ -3547,7 +3547,7 @@ MibSModel::findAllRFBounds()
                }
             }
 
-            if(whichRF == 1){
+            if(whichRF == MibSRiskFuncOptimistic){
                objVal = dSolver->getObjValue() * solver()->getObjSense();
             }else{
                // YX: NOTE the special UB problem in the Pessimistic Case
@@ -3588,8 +3588,8 @@ MibSModel::findAllRFBounds()
 void 
 MibSModel::printSLMILP()
 {
-   // YX: print (SL-MILP) in .lp format for external verification;
-   // -- Modified Loading function in MibSBilevel to pass in optimal x_L 
+   // YX: print (SL-MILP) for optimal upper/1st stage in .lp format
+   /* Modified Loading function in MibSBilevel to pass in optimal x_L */
 
    double * allSol;
    int i(0), index(0);

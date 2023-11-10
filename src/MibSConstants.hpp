@@ -112,7 +112,14 @@ enum MibSBoundCutOptimalType{
   MibSBoundCutOptimalTypeNonParametric
 };
 
-//############################################################################# 
+//#############################################################################
+// YX: pessimistic case; for testing
+enum MibSRiskFuncType{
+  MibSRiskFuncOptimistic = 1,
+  MibSRiskFuncPessimistic
+};
+
+//#############################################################################  
 /*---------  which_active_con_method choices --------------------------------*/
 #define SIMPLE  0
 #define BASIS  1

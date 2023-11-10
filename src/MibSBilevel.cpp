@@ -934,7 +934,7 @@ MibSBilevel::setUpUBModel(OsiSolverInterface * oSolver, double objValLL,
     }
      
     if(!typeRF){
-        typeRF = (findPes)? 2 : 1; 
+        typeRF = (findPes)? MibSRiskFuncPessimistic : MibSRiskFuncOptimistic; 
     }
 
     int * varType = model_->varType_;
@@ -1040,7 +1040,7 @@ MibSBilevel::setUpUBModel(OsiSolverInterface * oSolver, double objValLL,
 	}
         /** Add pessimistic risk function constraint at (rowNum-2) **/
         // YX: assume optLowerSolutionOrd_ always contains the pes solution; may add to param later
-        if(typeRF > 1){
+        if(typeRF == MibSRiskFuncPessimistic){
             CoinPackedVector row2;
             for(i = 0; i < lCols; i++){
                 index1 = lColIndices[i];
@@ -1094,7 +1094,7 @@ MibSBilevel::setUpUBModel(OsiSolverInterface * oSolver, double objValLL,
     else{
 	nSolver = UBSolver_;
 	nSolver->setRowUpper(rowNum-1, objUb); // YX: gap added to phi(A^2x)
-    if(typeRF > 1){
+    if(typeRF == MibSRiskFuncPessimistic){
         nSolver->setRowLower(rowNum-2, getRiskFuncVal(optLowerSolutionOrd_));
     }
 	for(i = 0; i < uCols; i++){
