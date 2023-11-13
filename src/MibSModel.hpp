@@ -508,7 +508,7 @@ public:
     int getLowerRowNum() {return lowerRowNum_;}
 
     /** Get the number of UL columns in LL problem array  **/
-    int getSizeFixedInd() {return sizeFixedInd_;}
+    int getSizeLinkVars() {return sizeLinkVars_;}
 
     /** Get objective sense of lower-level problem **/
     double getLowerObjSense() {return lowerObjSense_;}

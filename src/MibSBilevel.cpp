@@ -300,7 +300,7 @@ MibSBilevel::checkBilevelFeasibility(bool isRoot)
     int uN(model_->upperDim_); // upper-level dimension
     int i(0), index(0), pos(0);
     int uRows(model_->getOrigUpperRowNum());
-    int sizeFixedInd(model_->getSizeFixedInd());
+    int sizeLinkVars(model_->getSizeLinkVars());
     double etol(model_->etol_), objVal(0.0), lowerObj(0.0);
     double pesRF(0.0), lpPesVal(0.0); // YX: pes rf values
     int * varType = model_->varType_;
@@ -714,7 +714,7 @@ MibSBilevel::checkBilevelFeasibility(bool isRoot)
 
             // YX: no need to solve (UB) when all upper vars are linking
             // or no upper-level constraints
-            if(((sizeFixedInd - uN) >= 0)||(uRows == 0)){
+            if(((sizeLinkVars - uN) >= 0)||(uRows == 0)){
                 isUBSolved_ = true; 
                 
                 // YX: update upper bound value; UBSolution default is 0;
