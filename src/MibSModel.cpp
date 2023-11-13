@@ -4265,26 +4265,21 @@ MibSModel::printProblemInfo(){
     else{
        std::cout << "Linking solution pool will not be used." << std::endl;
     }
+    
+    // YX: Printing "slTargetGap" parameter;
+    if(MibSPar_->entry(MibSParams::slTargetGap) > -1){
+        std::cout << "Second (lower) level optimality gap is set to ";
+        std::cout << MibSPar_->entry(MibSParams::slTargetGap) <<"%."<< std::endl;
+    }
 
+    //YX: Printing "findPesSol" parameter;
+    if(MibSPar_->entry(MibSParams::findPesSol) == PARAM_ON){
+        std::cout << "Searching for a pessimistic solution." << std::endl;
+    }
     std::cout << std::endl;
 
     //if (MibSPar_->entry(MibSParams::printParameters)){
     //   writeParameters(std::cout);
     //}
     
-    //YX: Printing "slTargetGap" parameter; setting it as a model property?
-    if (printProblemInfo == true){
-       if(MibSPar_->entry(MibSParams::slTargetGap) > -1){
-          std::cout << "Second (lower) level optimality gap is set to ";
-          std::cout << MibSPar_->entry(MibSParams::slTargetGap) <<"%."<< std::endl;
-       }
-    }
-
-    //YX: Printing "findPesSol" parameter;
-    if (printProblemInfo == true){
-       if(MibSPar_->entry(MibSParams::findPesSol) == PARAM_ON){
-          std::cout << "Searching for a pessimistic solution." << std::endl;
-       }
-    }
-    std::cout << std::endl;
 }
