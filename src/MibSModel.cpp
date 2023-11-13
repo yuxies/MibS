@@ -51,6 +51,11 @@
 #include "SymConfig.h"
 #include "OsiSymSolverInterface.hpp"
 #endif
+#ifdef COIN_HAS_SYMPHONY
+#include "symphony.h"
+#include "SymConfig.h"
+#include "OsiSymSolverInterface.hpp"
+#endif
 #ifdef MIBS_HAS_CPLEX
 #include "cplex.h"
 #include "OsiCpxSolverInterface.hpp"
@@ -3393,14 +3398,14 @@ MibSModel::findDiffObjBound()
       for(i = 0; i < upperDim_; ++i){
          if(bS_->optUpperSolutionOrd_[i] > 1.0e-15 || 
                bS_->optUpperSolutionOrd_[i] < -1.0e-15) {
-	         nearInt = floor(bS_->optUpperSolutionOrd_[i] + 0.5);
+	         nearInt = (int)floor(bS_->optUpperSolutionOrd_[i] + 0.5);
             std::cout << "UB results x[" << i << "] = " << nearInt << std::endl;
          }
       }
       for(i = 0; i < lowerDim_; ++i){
          if(bS_->vfLowerSolutionOrd_[i] > 1.0e-15 || 
                bS_->vfLowerSolutionOrd_[i] < -1.0e-15) {
-            nearInt = floor(bS_->vfLowerSolutionOrd_[i] + 0.5);
+            nearInt = (int)floor(bS_->vfLowerSolutionOrd_[i] + 0.5);
             std::cout << "UB results y[" << i << "] = " << nearInt << std::endl;
          }
       }
@@ -3421,12 +3426,12 @@ MibSModel::findAllRFBounds()
       all other risk function problems with various delta/gap level, except the 
       solved one: using findPesSol determine RF types; the function will return the 
       corresponding llv solutions and objective values; see findDiffObjBound(); */
-   bool pesRF(MibSPar_->entry(MibSParams::findPesSol));
+//    bool pesRF(MibSPar_->entry(MibSParams::findPesSol));
    int whichCutsLL(MibSPar_->entry(MibSParams::whichCutsLL));
    double lObjVal(0.0), objVal(0.0), trgtGap(0.0);
    double remainingTime(3600.0);
    double * allSol;
-   int i(0), j(0), index(0), nearInt(0), whichRF(0), pos(0);
+   int i(0), j(0), index(0), whichRF(0), pos(0);
 
    // YX: C98 compatible
    // std::vector<double> targetGaps{20, 10, 0};
@@ -3556,20 +3561,6 @@ MibSModel::findAllRFBounds()
 
             std::cout<< "Robust Analysis RF " << whichRF << " gap " << (int) trgtGap <<": ";
             std::cout<< "the UB obj value found is " << objVal << std::endl;
-            // for(i = 0; i < upperDim_; ++i){
-            //    if(bS_->optUpperSolutionOrd_[i] > 1.0e-15 || 
-            //          bS_->optUpperSolutionOrd_[i] < -1.0e-15) {
-            //       nearInt = floor(bS_->optUpperSolutionOrd_[i] + 0.5);
-            //       std::cout << "UB results x[" << i << "] = " << nearInt << std::endl;
-            //    }
-            // }
-            // for(i = 0; i < lowerDim_; ++i){
-            //    if(bS_->vfLowerSolutionOrd_[i] > 1.0e-15 || 
-            //          bS_->vfLowerSolutionOrd_[i] < -1.0e-15) {
-            //       nearInt = floor(bS_->vfLowerSolutionOrd_[i] + 0.5);
-            //       std::cout << "UB results y[" << i << "] = " << nearInt << std::endl;
-            //    }
-            // }
          }else{
             std::cout<< "Robust Analysis RF " << whichRF << " gap " << (int) trgtGap <<": ";
             std::cout<< "the UB problem is infeasible." << std::endl;
