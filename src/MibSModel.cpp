@@ -4647,6 +4647,8 @@ MibSModel::printProblemInfo(){
     //YX: Printing "findPesSol" parameter;
     if(MibSPar_->entry(MibSParams::findPesSol) == PARAM_ON){
         std::cout << "Searching for a pessimistic solution." << std::endl;
+    }else{
+        std::cout << "Searching for an optimistic solution." << std::endl;
     }
     std::cout << std::endl;
 

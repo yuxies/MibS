@@ -1576,9 +1576,9 @@ MibSCutGenerator::findLowerLevelSolImprovingDirectionIC(double *uselessIneqs, do
 	//std::cout << "current time = " << timeLimit - localModel_->broker_->subTreeTimer().getTime() << std::endl;
 	//throw CoinError("The MIP which is solved for ImprovingDirectionIC, cannot be infeasible!",
 	//		"findLowerLevelSolImprovingDirectionIC", "MibSCutGenerator");
-      if(targetGap > etol){
-        std::cout << "Watermelon/IDIC aux MILP with optimality gap is infeasible." << std::endl;     
-      } // YX: debug only; remove later  
+      // if(targetGap > etol){
+      //   std::cout << "Watermelon/IDIC aux MILP with optimality gap is infeasible." << std::endl;     
+      // } // YX: debug only; remove later  
     }
     delete [] lCoeffsTimesLpSol;
     return foundSolution;
