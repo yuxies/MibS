@@ -1669,7 +1669,10 @@ MibSCutGenerator::getAlphaImprovingDirectionIC(double** extRay, double *uselessI
     }
 
     if(targetGap > etol){
-      rhs[sizeRhs-1] += -templObj - fabs(templObj) * gap/100; 
+      rhs[sizeRhs-1] += -templObj - fabs(templObj) * gap/100;
+      if((rhs[sizeRhs-1] > -etol) && (rhs[sizeRhs-1] < etol)){
+        rhs[sizeRhs-1] = 0.0;
+      } 
     }
 
     for(i = 0; i < lRows + lCols; i++){ // YX: WAS (sizeRhs - lCol)
