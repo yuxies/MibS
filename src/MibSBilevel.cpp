@@ -293,8 +293,8 @@ MibSBilevel::checkBilevelFeasibility(bool isRoot)
 	// YX: target optimality gap for bounded rationality			
 	double targetGap(model_->MibSPar()->entry(MibSParams::slTargetGap));
     double timeLimit(model_->AlpsPar()->entry(AlpsParams::timeLimit));
-    bool isPesOptimal = false; // YX: for pes check when no linking pool
-    double remainingTime(0.0), startTimeVF(0.0), startTimePES(0.0), startTimeUB(0.0); // YX: (PES-MILP)
+    bool isPesOptimal = false; // YX: for pes check w/o linking pool; currently not used;
+    double remainingTime(0.0), startTimeVF(0.0), startTimePES(0.0), startTimeUB(0.0); // YX: add timer for (PES-MILP)
     MibSSolType storeSol(MibSNoSol);
     int lN(model_->lowerDim_); // lower-level dimension
     int uN(model_->upperDim_); // upper-level dimension
@@ -668,6 +668,8 @@ MibSBilevel::checkBilevelFeasibility(bool isRoot)
 	    objVal_ = objVal;
 	    std::copy(model_->seenLinkingSolutions[linkSol].lowerSolution.begin(),
 		      model_->seenLinkingSolutions[linkSol].lowerSolution.end(), lowerSol);
+        // YX: load to (VF) container in case of cut generation 
+        memcpy(vfLowerSolutionOrd_, lowerSol, sizeof(double) * lN);
 
         // YX: pessimistic case; retrieve max d^1y only when (PES-MILP) is feasible
         if(findPesSol){
@@ -686,8 +688,8 @@ MibSBilevel::checkBilevelFeasibility(bool isRoot)
 	LPSolStatus_ = MibSLPSolStatusInfeasible;
 	
 	//step 15
-    // YX: [d2^y - phi(A^x)]/abs(phi(A^x)), combined check when gap is set to 0;
-    if(!findPesSol){
+    // YX: [d^2y - phi(A^2x)]/abs(phi(A^2x)), combined check when gap is set to 0;
+    if(!findPesSol || !isLinkVarsIntegral_){
         if(((lowerObj - objVal) <= fabs(objVal) * gap/100) && (isIntegral_)){
         // if(((lowerObj - objVal) < etol) && (isIntegral_)){
             LPSolStatus_ = MibSLPSolStatusFeasible;
@@ -695,6 +697,7 @@ MibSBilevel::checkBilevelFeasibility(bool isRoot)
             shouldPrune_ = true;
             storeSol = MibSRelaxationSol;            
         }else{
+            // YX: consider heuristic solutions
             memcpy(optLowerSolutionOrd_, lowerSol, sizeof(double) * lN);
             if(isUpperIntegral_){
                 storeSol = MibSHeurSol;
@@ -747,7 +750,7 @@ MibSBilevel::checkBilevelFeasibility(bool isRoot)
 		((computeBestUBWhenLVarsInt == PARAM_ON)  && (isLinkVarsIntegral_)) ||
 		((computeBestUBWhenLVarsFixed == PARAM_ON) && (isLinkVarsFixed_)))){
         
-        // YX: if (pes), then (PES-MILP) is solved and a solution is found;
+        // YX: if (pes), then (PES-MILP) should have been solved and a solution is found;
 
         if(UBSolver_){
             UBSolver_ = setUpUBModel(model_->getSolver(), objVal, false, targetGap);
